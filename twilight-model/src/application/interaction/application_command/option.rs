@@ -364,6 +364,7 @@ pub enum CommandOptionValue {
 }
 
 impl CommandOptionValue {
+    /// Immutable reference to the associated resource type.
     pub const fn kind(&self) -> CommandOptionType {
         match self {
             CommandOptionValue::Attachment(_) => CommandOptionType::Attachment,

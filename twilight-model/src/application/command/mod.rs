@@ -1,4 +1,4 @@
-//! Used for building commands to send to Discord.
+//! Commands user's may natively interact with.
 //!
 //! It is highly recommended to use the associated [`CommandBuilder`] in the
 //! [`twilight-util`] to create [`Command`]s; [`CommandOption`] is especially
@@ -9,15 +9,11 @@
 
 pub mod permissions;
 
-mod command_type;
 mod option;
 
-pub use self::{
-    command_type::CommandType,
-    option::{
-        CommandOption, CommandOptionChoice, CommandOptionChoiceData, CommandOptionType,
-        CommandOptionValue,
-    },
+pub use self::option::{
+    CommandOption, CommandOptionChoice, CommandOptionChoiceData, CommandOptionType,
+    CommandOptionValue,
 };
 
 use crate::{
@@ -30,63 +26,129 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-/// Data sent to Discord to create a command.
+/// Command user's may execute.
 ///
-/// [`CommandOption`]s that are required must be listed before optional ones.
-/// Command names must be lower case, matching the Regex `^[\w-]{1,32}$`. See
-/// [Discord Docs/Application Command Object].
+/// The description and name may be localized in any [available locale],
+/// see [Discord Docs/Localization].
 ///
-/// [Discord Docs/Application Command Object]: https://discord.com/developers/docs/interactions/application-commands#application-command-object-application-command-structure
+/// [`ChatInput`] command names and options, and their localizations, must match
+/// the Regex `^[-_\p{L}\p{N}\p{sc=Deva}\p{sc=Thai}]{1,32}$`.
+///
+/// [available locale]: https://discord.com/developers/docs/reference#locales
+/// [`ChatInput`]: CommandType::ChatInput
+/// [Discord Docs/Localization]: https://discord.com/developers/docs/interactions/application-commands#localization
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct Command {
+    /// Parent application ID.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub application_id: Option<Id<ApplicationMarker>>,
     /// Default permissions required for a member to run the command.
     ///
-    /// Setting this [`Permissions::empty()`] will prohibit anyone from running
-    /// the command, except for guild administrators.
+    /// Defaults to no required permission.
+    ///
+    /// Setting this [`Permissions::empty()`] will prohibit anyone except admins
+    /// from running the command.
     pub default_member_permissions: Option<Permissions>,
     /// Whether the command is available in DMs.
     ///
-    /// This is only relevant for globally-scoped commands. By default, commands
-    /// are visible in DMs.
+    /// Applicable for globally-scoped commands.
+    ///
+    /// Defaults to `true`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub dm_permission: Option<bool>,
-    /// Description of the command.
+    /// Description of the command. Must be 100 characters or less.
     ///
-    /// For [`User`] and [`Message`] commands, this will be an empty string.
+    /// Ignored for [`Message`] and [`User`] commands.
     ///
     /// [`User`]: CommandType::User
     /// [`Message`]: CommandType::Message
     pub description: String,
-    /// Localization dictionary for the `description` field.
+    /// Localization dictionary for the [`description`] field.
     ///
-    /// See [Discord Docs/Localization].
+    /// Defaults to no localizations.
     ///
-    /// [Discord Docs/Localization]: https://discord.com/developers/docs/interactions/application-commands#localization
+    /// Keys must be valid locales and values must be 100 characters or less.
+    ///
+    /// [`description`]: Self::description
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description_localizations: Option<HashMap<String, String>>,
-    /// Guild ID of the command, if not global.
+    /// Guild ID of the command.
+    ///
+    /// Defaults to being globally-scoped.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub guild_id: Option<Id<GuildMarker>>,
+    /// Unique command ID.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<Id<CommandMarker>>,
+    /// Type of command.
     #[serde(rename = "type")]
     pub kind: CommandType,
+    /// Name of the command. Must be 32 characters or less.
     pub name: String,
-    /// Localization dictionary for the `name` field.
+    /// Localization dictionary for the [`name`] field.
     ///
-    /// Keys should be valid locales. See [Discord Docs/Locales],
-    /// [Discord Docs/Localization].
+    /// Defaults to no localizations.
     ///
-    /// [Discord Docs/Locales]: https://discord.com/developers/docs/reference#locales
-    /// [Discord Docs/Localization]: https://discord.com/developers/docs/interactions/application-commands#localization
+    /// Keys must be valid locales and values must be 32 characters or less.
+    ///
+    /// [`name`]: Self::name
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name_localizations: Option<HashMap<String, String>>,
     #[serde(default)]
+    /// List of command options.
+    ///
+    /// Applicable for commands of type [`ChatInput`].
+    ///
+    /// Required options must be listed before optional ones.
+    ///
+    /// [`ChatInput`]: CommandType::ChatInput
     pub options: Vec<CommandOption>,
     /// Autoincrementing version identifier.
     pub version: Id<CommandVersionMarker>,
+}
+
+/// Type of a [`Command`].
+// Keep in sync with `twilight-validate::command`!
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[non_exhaustive]
+#[serde(from = "u8", into = "u8")]
+pub enum CommandType {
+    /// Slash command.
+    ///
+    /// Text-based command that appears when a user types `/`.
+    ChatInput,
+    /// UI-based command.
+    ///
+    /// Appears when a user right clicks or taps on a user.
+    User,
+    /// UI-based command.
+    ///
+    /// Appears when a user right clicks or taps on a message.
+    Message,
+    /// Variant value is unknown to the library.
+    Unknown(u8),
+}
+
+impl From<u8> for CommandType {
+    fn from(value: u8) -> Self {
+        match value {
+            1 => Self::ChatInput,
+            2 => Self::User,
+            3 => Self::Message,
+            unknown => Self::Unknown(unknown),
+        }
+    }
+}
+
+impl From<CommandType> for u8 {
+    fn from(value: CommandType) -> Self {
+        match value {
+            CommandType::ChatInput => 1,
+            CommandType::User => 2,
+            CommandType::Message => 3,
+            CommandType::Unknown(unknown) => unknown,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -96,8 +158,32 @@ mod tests {
         CommandOptionValue, CommandType,
     };
     use crate::{channel::ChannelType, guild::Permissions, id::Id};
-    use serde_test::Token;
+    use serde::{Deserialize, Serialize};
+    use serde_test::{assert_tokens, Token};
+    use static_assertions::assert_impl_all;
     use std::collections::HashMap;
+    use std::{fmt::Debug, hash::Hash};
+
+    assert_impl_all!(
+        CommandType: Clone,
+        Copy,
+        Debug,
+        Deserialize<'static>,
+        Eq,
+        Hash,
+        PartialEq,
+        Serialize,
+        Send,
+        Sync
+    );
+
+    #[test]
+    fn type_variants() {
+        assert_tokens(&CommandType::ChatInput, &[Token::U8(1)]);
+        assert_tokens(&CommandType::User, &[Token::U8(2)]);
+        assert_tokens(&CommandType::Message, &[Token::U8(3)]);
+        assert_tokens(&CommandType::Unknown(99), &[Token::U8(99)]);
+    }
 
     #[test]
     #[allow(clippy::too_many_lines)]
@@ -310,7 +396,7 @@ mod tests {
             version: Id::new(1),
         };
 
-        serde_test::assert_tokens(
+        assert_tokens(
             &value,
             &[
                 Token::Struct {

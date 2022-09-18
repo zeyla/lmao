@@ -80,6 +80,21 @@ struct CommandPermissionData {
     permission: bool,
 }
 
+impl From<CommandPermissionData> for CommandPermission {
+    fn from(data: CommandPermissionData) -> Self {
+        let id = match data.kind {
+            CommandPermissionDataType::Role => CommandPermissionType::Role(data.id.cast()),
+            CommandPermissionDataType::User => CommandPermissionType::User(data.id.cast()),
+            CommandPermissionDataType::Channel => CommandPermissionType::Channel(data.id.cast()),
+        };
+
+        Self {
+            id,
+            permission: data.permission,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize_repr, Eq, PartialEq, Serialize_repr)]
 #[non_exhaustive]
 #[repr(u8)]
@@ -91,23 +106,7 @@ enum CommandPermissionDataType {
 
 impl<'de> Deserialize<'de> for CommandPermission {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let data = CommandPermissionData::deserialize(deserializer)?;
-
-        let span = tracing::trace_span!("deserializing command permission");
-        let _span_enter = span.enter();
-
-        let id = match data.kind {
-            CommandPermissionDataType::Role => CommandPermissionType::Role(data.id.cast()),
-            CommandPermissionDataType::User => CommandPermissionType::User(data.id.cast()),
-            CommandPermissionDataType::Channel => CommandPermissionType::Channel(data.id.cast()),
-        };
-
-        tracing::trace!(id = %data.id, kind = ?data.kind);
-
-        Ok(Self {
-            id,
-            permission: data.permission,
-        })
+        CommandPermissionData::deserialize(deserializer).map(Into::into)
     }
 }
 

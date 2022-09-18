@@ -15,7 +15,6 @@ use std::collections::hash_map::HashMap;
 ///
 /// See [Discord Docs/Resolved Data Structure].
 ///
-/// [`ApplicationCommand`]: crate::application::interaction::InteractionType::ApplicationCommand
 /// [Discord Docs/Resolved Data Structure]: https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-object-resolved-data-structure
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct CommandInteractionDataResolved {
@@ -84,6 +83,7 @@ pub struct InteractionMember {
     pub pending: bool,
     /// Total permissions of the member in this channel including overwrites
     pub permissions: Permissions,
+    /// Member guild boost date.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub premium_since: Option<Timestamp>,
     /// Member roles.

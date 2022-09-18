@@ -28,18 +28,6 @@ pub enum InteractionType {
     ModalSubmit = 5,
 }
 
-impl InteractionType {
-    pub const fn kind(self) -> &'static str {
-        match self {
-            Self::Ping => "Ping",
-            Self::ApplicationCommand => "ApplicationCommand",
-            Self::MessageComponent => "MessageComponent",
-            Self::ApplicationCommandAutocomplete => "ApplicationCommandAutocomplete",
-            Self::ModalSubmit => "ModalSubmit",
-        }
-    }
-}
-
 #[derive(Debug)]
 pub struct UnknownInteractionTypeError {
     value: u8,
@@ -92,21 +80,6 @@ mod tests {
     const_assert_eq!(3, InteractionType::MessageComponent as u8);
     const_assert_eq!(4, InteractionType::ApplicationCommandAutocomplete as u8);
     const_assert_eq!(5, InteractionType::ModalSubmit as u8);
-
-    #[test]
-    fn kind() {
-        assert_eq!("Ping", InteractionType::Ping.kind());
-        assert_eq!(
-            "ApplicationCommand",
-            InteractionType::ApplicationCommand.kind()
-        );
-        assert_eq!("MessageComponent", InteractionType::MessageComponent.kind());
-        assert_eq!(
-            "ApplicationCommandAutocomplete",
-            InteractionType::ApplicationCommandAutocomplete.kind()
-        );
-        assert_eq!("ModalSubmit", InteractionType::ModalSubmit.kind());
-    }
 
     #[test]
     fn try_from() -> Result<(), UnknownInteractionTypeError> {

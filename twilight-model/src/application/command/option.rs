@@ -200,37 +200,86 @@ pub enum CommandOptionValue {
 }
 
 /// Type of a [`CommandOption`].
+///
+/// Determines valid container items, mentions, and user input types.
 #[derive(Clone, Copy, Debug, Deserialize_repr, Eq, Hash, PartialEq, Serialize_repr)]
 #[non_exhaustive]
 #[repr(u8)]
 pub enum CommandOptionType {
+    /// Option (non subcommand and subcommand group) container.
     SubCommand = 1,
+    /// [`SubCommand`] option container.
+    ///
+    /// [`SubCommand`]: Self::SubCommand
     SubCommandGroup = 2,
+    /// String input.
     String = 3,
+    /// Integer (between `-2^53` and `2^53`) input.
     Integer = 4,
+    /// Boolean input.
     Boolean = 5,
+    /// [`User`] mention.
+    ///
+    /// [`User`]: crate::user::User
     User = 6,
+    /// [`Channel`] mention.
+    ///
+    /// [`Channel`]: crate::channel::Channel
     Channel = 7,
+    /// [`Role`] mention.
+    ///
+    /// [`Role`]: crate::guild::Role
     Role = 8,
+    /// [`Role`] or [`User`] mention.
+    ///
+    /// [`Role`]: crate::guild::Role
+    /// [`User`]: crate::user::User
     Mentionable = 9,
+    /// Rational number (between `-2^53` and `2^53`) input.
     Number = 10,
+    /// [`Attachment`] input.
+    ///
+    /// Resolves to an entry in [`CommandInteractionDataResolved`]'s
+    /// attachments map.
+    ///
+    /// [`Attachment`]: crate::http::attachment::Attachment
+    /// [`CommandInteractionDataResolved`]: crate::application::interaction::application_command::CommandInteractionDataResolved
     Attachment = 11,
 }
 
-impl CommandOptionType {
-    pub const fn kind(self) -> &'static str {
-        match self {
-            CommandOptionType::SubCommand => "SubCommand",
-            CommandOptionType::SubCommandGroup => "SubCommandGroup",
-            CommandOptionType::String => "String",
-            CommandOptionType::Integer => "Integer",
-            CommandOptionType::Boolean => "Boolean",
-            CommandOptionType::User => "User",
-            CommandOptionType::Channel => "Channel",
-            CommandOptionType::Role => "Role",
-            CommandOptionType::Mentionable => "Mentionable",
-            CommandOptionType::Number => "Number",
-            CommandOptionType::Attachment => "Attachment",
-        }
+#[cfg(test)]
+mod tests {
+    use super::CommandOptionType;
+    use serde::{Deserialize, Serialize};
+    use serde_test::{assert_tokens, Token};
+    use static_assertions::assert_impl_all;
+    use std::{fmt::Debug, hash::Hash};
+
+    assert_impl_all!(
+        CommandOptionType: Clone,
+        Copy,
+        Debug,
+        Deserialize<'static>,
+        Eq,
+        Hash,
+        PartialEq,
+        Serialize,
+        Send,
+        Sync
+    );
+
+    #[test]
+    fn type_variants() {
+        assert_tokens(&CommandOptionType::SubCommand, &[Token::U8(1)]);
+        assert_tokens(&CommandOptionType::SubCommandGroup, &[Token::U8(2)]);
+        assert_tokens(&CommandOptionType::String, &[Token::U8(3)]);
+        assert_tokens(&CommandOptionType::Integer, &[Token::U8(4)]);
+        assert_tokens(&CommandOptionType::Boolean, &[Token::U8(5)]);
+        assert_tokens(&CommandOptionType::User, &[Token::U8(6)]);
+        assert_tokens(&CommandOptionType::Channel, &[Token::U8(7)]);
+        assert_tokens(&CommandOptionType::Role, &[Token::U8(8)]);
+        assert_tokens(&CommandOptionType::Mentionable, &[Token::U8(9)]);
+        assert_tokens(&CommandOptionType::Number, &[Token::U8(10)]);
+        assert_tokens(&CommandOptionType::Attachment, &[Token::U8(11)]);
     }
 }
