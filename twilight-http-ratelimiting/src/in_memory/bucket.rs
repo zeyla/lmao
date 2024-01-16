@@ -3,7 +3,8 @@
 //! consumed by the [`BucketQueueTask`] that manages the ratelimit for the bucket
 //! and respects the global ratelimit.
 
-use super::GlobalLockPair;
+use super::GlobalBucket;
+use crate::ticket::TicketSender;
 use crate::{headers::RatelimitHeaders, request::Path, ticket::TicketNotifier};
 use std::{
     collections::HashMap,
@@ -13,6 +14,7 @@ use std::{
     },
     time::{Duration, Instant},
 };
+use tokio::sync::oneshot::error::RecvError;
 use tokio::{
     sync::{
         mpsc::{self, UnboundedReceiver, UnboundedSender},
@@ -55,11 +57,11 @@ impl Bucket {
     /// Create a new bucket for the specified [`Path`].
     pub fn new(path: Path) -> Self {
         Self {
-            limit: AtomicU64::new(u64::max_value()),
+            limit: AtomicU64::new(u64::MAX),
             path,
             queue: BucketQueue::default(),
-            remaining: AtomicU64::new(u64::max_value()),
-            reset_after: AtomicU64::new(u64::max_value()),
+            remaining: AtomicU64::new(u64::MAX),
+            reset_after: AtomicU64::new(u64::MAX),
             started_at: Mutex::new(None),
         }
     }
@@ -132,7 +134,7 @@ impl Bucket {
         }
 
         if let Some((limit, remaining, reset_after)) = ratelimits {
-            if bucket_limit != limit && bucket_limit == u64::max_value() {
+            if bucket_limit != limit && bucket_limit == u64::MAX {
                 self.reset_after.store(reset_after, Ordering::SeqCst);
                 self.limit.store(limit, Ordering::SeqCst);
             }
@@ -160,10 +162,10 @@ impl BucketQueue {
     }
 
     /// Receive the first incoming ratelimit request.
-    pub async fn pop(&self, timeout_duration: Duration) -> Option<TicketNotifier> {
+    pub async fn pop(&self) -> Option<TicketNotifier> {
         let mut rx = self.rx.lock().await;
 
-        timeout(timeout_duration, rx.recv()).await.ok().flatten()
+        rx.recv().await
     }
 }
 
@@ -187,7 +189,7 @@ pub(super) struct BucketQueueTask {
     /// All buckets managed by the associated [`super::InMemoryRatelimiter`].
     buckets: Arc<Mutex<HashMap<Path, Arc<Bucket>>>>,
     /// Global ratelimit data.
-    global: Arc<GlobalLockPair>,
+    global: GlobalBucket,
     /// The [`Path`] this [`Bucket`] belongs to.
     path: Path,
 }
@@ -200,7 +202,7 @@ impl BucketQueueTask {
     pub fn new(
         bucket: Arc<Bucket>,
         buckets: Arc<Mutex<HashMap<Path, Arc<Bucket>>>>,
-        global: Arc<GlobalLockPair>,
+        global: GlobalBucket,
         path: Path,
     ) -> Self {
         Self {
@@ -216,9 +218,8 @@ impl BucketQueueTask {
     #[tracing::instrument(name = "background queue task", skip(self), fields(path = ?self.path))]
     pub async fn run(self) {
         while let Some(queue_tx) = self.next().await {
-            if self.global.is_locked() {
-                drop(self.global.0.lock().await);
-            }
+            // Do not lock up if the global rate limiter crashes for any reason
+            let global_ticket_tx = self.wait_for_global().await.ok();
 
             let Some(ticket_headers) = queue_tx.available() else {
                 continue;
@@ -227,7 +228,10 @@ impl BucketQueueTask {
             tracing::debug!("starting to wait for response headers");
 
             match timeout(Self::WAIT, ticket_headers).await {
-                Ok(Ok(Some(headers))) => self.handle_headers(&headers).await,
+                Ok(Ok(Some(headers))) => {
+                    self.handle_headers(&headers);
+                    global_ticket_tx.and_then(|tx| tx.headers(Some(headers)).ok());
+                }
                 Ok(Ok(None)) => {
                     tracing::debug!("request aborted");
                 }
@@ -248,34 +252,29 @@ impl BucketQueueTask {
             .remove(&self.path);
     }
 
-    /// Update the bucket's ratelimit state.
-    async fn handle_headers(&self, headers: &RatelimitHeaders) {
-        let ratelimits = match headers {
-            RatelimitHeaders::Global(global) => {
-                self.lock_global(Duration::from_secs(global.retry_after()))
-                    .await;
+    #[tracing::instrument(name = "waiting for global bucket", skip_all)]
+    async fn wait_for_global(&self) -> Result<TicketSender, RecvError> {
+        let (tx, rx) = super::ticket::channel();
+        self.global.queue().push(tx);
 
-                None
-            }
-            RatelimitHeaders::None => return,
+        tracing::debug!("waiting for global rate limit");
+        let res = rx.await;
+        tracing::debug!("done waiting for global rate limit");
+
+        res
+    }
+
+    /// Update the bucket's ratelimit state.
+    fn handle_headers(&self, headers: &RatelimitHeaders) {
+        let ratelimits = match headers {
             RatelimitHeaders::Present(present) => {
                 Some((present.limit(), present.remaining(), present.reset_after()))
             }
+            _ => return,
         };
 
         tracing::debug!(path=?self.path, "updating bucket");
         self.bucket.update(ratelimits);
-    }
-
-    /// Lock the global ratelimit for a specified duration.
-    async fn lock_global(&self, wait: Duration) {
-        tracing::debug!(path=?self.path, "request got global ratelimited");
-        self.global.lock();
-        let lock = self.global.0.lock().await;
-        sleep(wait).await;
-        self.global.unlock();
-
-        drop(lock);
     }
 
     /// Get the next [`TicketNotifier`] in the queue.
@@ -284,7 +283,7 @@ impl BucketQueueTask {
 
         self.wait_if_needed().await;
 
-        self.bucket.queue.pop(Self::WAIT).await
+        self.bucket.queue.pop().await
     }
 
     /// Wait for this bucket to refresh if it isn't ready yet.
