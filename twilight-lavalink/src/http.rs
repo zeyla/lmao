@@ -9,66 +9,69 @@ use percent_encoding::NON_ALPHANUMERIC;
 use serde::{Deserialize, Deserializer, Serialize};
 use std::net::{IpAddr, SocketAddr};
 
-/// The type of search result given.
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[non_exhaustive]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum LoadType {
-    /// Loading the results failed.
-    LoadFailed,
-    /// There were no matches.
-    NoMatches,
-    /// A playlist was found.
-    PlaylistLoaded,
-    /// Some results were found.
-    SearchResult,
-    /// A single track was found.
-    TrackLoaded,
-}
-
-/// A track within a search result.
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[non_exhaustive]
-#[serde(rename_all = "camelCase")]
-pub struct Track {
-    /// Details about a track, such as the author and title.
-    pub info: TrackInfo,
-    /// The base64 track string that you use in the [`Play`] event.
-    ///
-    /// [`Play`]: crate::model::outgoing::Play
-    pub track: String,
-}
-
-/// Additional information about a track, such as the author.
+/// Information about the track returned or playing on lavalink.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub struct TrackInfo {
-    /// The name of the author, if provided.
-    pub author: Option<String>,
-    /// The identifier of the source of the track.
+    /// The track identifier.
     pub identifier: String,
-    /// Whether the source is seekable.
+    /// Whether the track is seekable.
     pub is_seekable: bool,
-    /// Whether the source is a stream.
-    pub is_stream: bool,
-    /// The length of the audio in milliseconds.
+    /// The track author.
+    pub author: String,
+    /// The track length in milliseconds.
     pub length: u64,
-    /// The position of the audio.
+    /// Whether the track is a stream.
+    pub is_stream: bool,
+    /// The track position in milliseconds.
     pub position: u64,
-    /// The title, if provided.
-    pub title: Option<String>,
-    /// The source URI of the track.
-    pub uri: String,
+    /// The track title.
+    pub title: String,
+    /// The track uri.
+    pub uri: Option<String>,
+    /// The track artwork url.
+    pub artwork_url: Option<String>,
+    /// The track [ISRC](https://en.wikipedia.org/wiki/International_Standard_Recording_Code).
+    pub isrc: Option<String>,
+    /// The track source name.
+    pub source_name: String,
 }
+
+
+
+/// A track object for lavalink to consume and read.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[non_exhaustive]
+#[serde(rename_all = "camelCase")]
+pub struct Track {
+    /// The base64 encoded track to play
+    pub encoded: String,
+    /// Info about the track
+    pub info: TrackInfo
+
+}
+
+/// The track on the player. The encoded and identifier are mutually exclusive. Using only enocded for now.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[non_exhaustive]
+#[serde(rename_all = "camelCase")]
+pub struct UpdatePlayerTrack {
+    /// The base64 encoded track to play. null stops the current track
+    pub encoded: String,
+    /// Additional track data to be sent back in the Track Object
+    pub user_data: Track,
+
+}
+
 
 /// Information about a playlist from a search result.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub struct PlaylistInfo {
-    /// The name of the playlist, if available.
-    pub name: Option<String>,
+    /// The name of the playlist
+    pub name: String,
     /// The selected track within the playlist, if available.
     #[serde(default, deserialize_with = "deserialize_selected_track")]
     pub selected_track: Option<u64>,
@@ -85,17 +88,89 @@ where
         .and_then(|selected| u64::try_from(selected).ok()))
 }
 
+/// The levels of severity that an exception can have.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[non_exhaustive]
+#[serde(rename_all = "camelCase")]
+pub enum Severity {
+    /// The cause is known and expected, indicates that there is nothing wrong with the library itself.
+    Common,
+    /// The cause might not be exactly known, but is possibly caused by outside factors. For example when an outside service responds in a format that we do not expect.
+    Suspicious,
+    /// The probable cause is an issue with the library or there is no way to tell what the cause might be. This is the default level and other levels are used in cases where the thrower has more in-depth knowledge about the error.
+    Fault,
+}
+
+
+/// The excpetion with the details attached on what happened when making a query to lavalink.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[non_exhaustive]
+#[serde(rename_all = "camelCase")]
+pub struct Exception {
+    /// The message of the exception.
+    pub message: Option<String>,
+    /// The severity of the exception.
+    pub severity: Severity,
+    /// The cause of the exception.
+    pub cause: String,
+}
+
+/// The type of search result given.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[non_exhaustive]
+#[serde(rename_all = "camelCase")]
+pub enum LoadResultName {
+    /// A track has been loaded.
+    Track,
+    /// A playlist has been loaded.
+    Playlist,
+    /// A search result has been loaded.
+    Search,
+    /// There has been no matches for your identifier.
+    Empty,
+    /// Loading has failed with an error.
+    Error,
+}
+
+
+/// The type of search result given.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[non_exhaustive]
+#[serde(rename_all = "camelCase")]
+pub enum LoadResultData {
+    /// Track result with the track info.
+    Track(Track),
+    /// The playlist results with the play list info and tracks in the playlist.
+    Playlist(PlaylistResult),
+    /// The list of tracks based on the search.
+    Search(Vec<Track>),
+    /// Empty data response.
+    Empty(),
+    /// The exception that was thrown when searching.
+    Error(Exception),
+
+}
+
+/// The playlist with the provided tracks. Currently plugin info isn't supported
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[non_exhaustive]
+#[serde(rename_all = "camelCase")]
+pub struct PlaylistResult {
+    /// The info of the playlist.
+    pub info: PlaylistInfo,
+    /// The tracks of the playlist.
+    pub tracks: Vec<Track>,
+}
+
 /// Possible track results for a query.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub struct LoadedTracks {
     /// The type of search result, such as a list of tracks or a playlist.
-    pub load_type: LoadType,
-    /// Information about the playlist, if provided.
-    pub playlist_info: PlaylistInfo,
-    /// The list of tracks returned for the search query.
-    pub tracks: Vec<Track>,
+    pub load_type: LoadResultName,
+    /// The data of the result.
+    pub data: LoadResultData,
 }
 
 /// A failing IP address within the planner.
@@ -258,7 +333,32 @@ pub fn load_track(
 ) -> Result<Request<&'static [u8]>, HttpError> {
     let identifier =
         percent_encoding::percent_encode(identifier.as_ref().as_bytes(), NON_ALPHANUMERIC);
-    let url = format!("http://{address}/loadtracks?identifier={identifier}");
+    let url = format!("http://{address}/v4/loadtracks?identifier={identifier}");
+
+    let mut req = Request::get(url);
+
+    let auth_value = HeaderValue::from_str(authorization.as_ref())?;
+    req = req.header(AUTHORIZATION, auth_value);
+
+    req.body(b"")
+}
+
+/// Decode a single track into its info
+///
+/// The response will include a body which can be deserialized into a
+/// [`Track`].
+///
+/// # Errors
+///
+/// See the documentation for [`http::Error`].
+pub fn decode_track(
+    address: SocketAddr,
+    encoded: impl AsRef<str>,
+    authorization: impl AsRef<str>,
+) -> Result<Request<&'static [u8]>, HttpError> {
+    let identifier =
+        percent_encoding::percent_encode(encoded.as_ref().as_bytes(), NON_ALPHANUMERIC);
+    let url = format!("http://{address}/v4/decodetrack?encodedTrack={identifier}");
 
     let mut req = Request::get(url);
 
@@ -317,7 +417,7 @@ pub fn unmark_failed_address(
 #[cfg(test)]
 mod tests {
     use super::{
-        FailingAddress, IpBlock, IpBlockType, LoadType, LoadedTracks, NanoIpDetails,
+        FailingAddress, IpBlock, IpBlockType, LoadedTracks, NanoIpDetails,
         NanoIpRoutePlanner, PlaylistInfo, RotatingIpDetails, RotatingIpRoutePlanner,
         RotatingNanoIpDetails, RotatingNanoIpRoutePlanner, RoutePlanner, RoutePlannerType, Track,
         TrackInfo,
@@ -359,17 +459,6 @@ mod tests {
         Serialize,
         Sync,
     );
-    assert_impl_all!(
-        LoadType: Clone,
-        Debug,
-        Deserialize<'static>,
-        Eq,
-        PartialEq,
-        Send,
-        Serialize,
-        Sync,
-    );
-    assert_fields!(LoadedTracks: load_type, playlist_info, tracks);
     assert_impl_all!(
         LoadedTracks: Clone,
         Debug,
@@ -512,7 +601,7 @@ mod tests {
         Serialize,
         Sync
     );
-    assert_fields!(Track: info, track);
+    assert_fields!(Track: encoded, info);
     assert_impl_all!(
         Track: Clone,
         Debug,
@@ -527,7 +616,7 @@ mod tests {
     #[test]
     pub fn test_deserialize_playlist_info_negative_selected_track() {
         let value = PlaylistInfo {
-            name: Some("Test Playlist".to_owned()),
+            name: "Test Playlist".to_owned(),
             selected_track: None,
         };
 
