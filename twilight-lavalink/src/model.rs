@@ -448,7 +448,7 @@ pub mod incoming {
         /// New statistics about a node and its host.
         Stats(Stats),
         // /// Dispatched when player or voice events occur.
-        // Event(Event),
+        Event(Event),
     }
 
     impl From<Ready> for IncomingEvent {
@@ -457,6 +457,12 @@ pub mod incoming {
         }
     }
 
+
+    impl From<Event> for IncomingEvent {
+        fn from(event: Event) -> IncomingEvent {
+            Self::Event(event)
+        }
+    }
 
     impl From<PlayerUpdate> for IncomingEvent {
         fn from(event: PlayerUpdate) -> IncomingEvent {
@@ -589,6 +595,22 @@ pub mod incoming {
         pub used: u64,
     }
 
+    /// Server dispatched an event. See the Event Types section for more information.
+    #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+    #[non_exhaustive]
+    #[serde(rename_all = "camelCase")]
+    pub struct Event {
+        /// Op code for this websocket event.
+        pub op: Opcode,
+        /// The guild id that this was recieved from.
+        pub guild_id: String,
+        /// The type of event.
+        pub r#type: EventType,
+        /// The data of the event type.
+        #[serde(flatten)]
+        pub data: EventData,
+    }
+
     /// Server dispatched an event.
     #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
     #[non_exhaustive]
@@ -608,6 +630,7 @@ pub mod incoming {
     /// Server dispatched an event.
     #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
     #[non_exhaustive]
+    #[serde(untagged)]
     pub enum EventData {
         /// Dispatched when a track starts playing.
         TrackStartEvent(TrackStart),

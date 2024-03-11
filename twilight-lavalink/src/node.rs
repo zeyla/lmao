@@ -628,6 +628,7 @@ impl Connection {
             IncomingEvent::PlayerUpdate(update) => self.player_update(update)?,
             IncomingEvent::Ready(ready) => *self.lavalink_session_id.lock().await = Some(ready.session_id.clone()),
             IncomingEvent::Stats(stats) => self.stats(stats).await?,
+            &IncomingEvent::Event(_) => {},
         }
 
         // It's fine if the rx end dropped, often users don't need to care about
