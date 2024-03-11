@@ -216,9 +216,6 @@ pub mod outgoing {
         /// The guild ID of the player.
         #[serde(skip_serializing)]
         pub guild_id: Id<GuildMarker>,
-        /// The lavalink session id to send this event to.
-        #[serde(skip_serializing)]
-        pub session_id: String,
         /// Whether or not to replace the currently playing track with this new
         /// track.
         ///
@@ -232,45 +229,43 @@ pub mod outgoing {
         /// Create a new play event.
         pub fn new(
             guild_id: Id<GuildMarker>,
-            session_id: impl Into<String>,
             track: impl Into<String>,
             start_time: impl Into<Option<u64>>,
             end_time: impl Into<Option<u64>>,
             no_replace: bool,
         ) -> Self {
-            Self::from((guild_id, session_id, track, start_time, end_time, no_replace))
+            Self::from((guild_id, track, start_time, end_time, no_replace))
         }
     }
 
-    impl<T: Into<String>, I: Into<String>> From<(Id<GuildMarker>, I, T)> for Play {
-        fn from((guild_id, session_id, track): (Id<GuildMarker>, I, T)) -> Self {
-            Self::from((guild_id, session_id, track, None, None, true))
+    impl<T: Into<String>> From<(Id<GuildMarker>, T)> for Play {
+        fn from((guild_id, track): (Id<GuildMarker>, T)) -> Self {
+            Self::from((guild_id, track, None, None, true))
         }
     }
 
-    impl<T: Into<String>, I: Into<String>, S: Into<Option<u64>>> From<(Id<GuildMarker>, I, T, S)> for Play {
-        fn from((guild_id, session_id, track, start_time): (Id<GuildMarker>, I, T, S)) -> Self {
-            Self::from((guild_id, session_id, track, start_time, None, true))
+    impl<T: Into<String>, S: Into<Option<u64>>> From<(Id<GuildMarker>, T, S)> for Play {
+        fn from((guild_id, track, start_time): (Id<GuildMarker>, T, S)) -> Self {
+            Self::from((guild_id, track, start_time, None, true))
         }
     }
 
-    impl<T: Into<String>, I: Into<String>, S: Into<Option<u64>>, E: Into<Option<u64>>>
-        From<(Id<GuildMarker>, I, T, S, E)> for Play
+    impl<T: Into<String>, S: Into<Option<u64>>, E: Into<Option<u64>>>
+        From<(Id<GuildMarker>, T, S, E)> for Play
     {
-        fn from((guild_id, session_id, track, start_time, end_time): (Id<GuildMarker>, I, T, S, E)) -> Self {
-            Self::from((guild_id, session_id, track, start_time, end_time, true))
+        fn from((guild_id, track, start_time, end_time): (Id<GuildMarker>, T, S, E)) -> Self {
+            Self::from((guild_id, track, start_time, end_time, true))
         }
     }
 
-    impl<T: Into<String>, I: Into<String>, S: Into<Option<u64>>, E: Into<Option<u64>>>
-        From<(Id<GuildMarker>, I, T, S, E, bool)> for Play
+    impl<T: Into<String>, S: Into<Option<u64>>, E: Into<Option<u64>>>
+        From<(Id<GuildMarker>, T, S, E, bool)> for Play
     {
         fn from(
-            (guild_id, session_id, track, start_time, end_time, no_replace): (Id<GuildMarker>, I, T, S, E, bool),
+            (guild_id, track, start_time, end_time, no_replace): (Id<GuildMarker>, T, S, E, bool),
         ) -> Self {
             Self {
                 guild_id,
-                session_id: session_id.into(),
                 no_replace,
                 position: start_time.into(),
                 end_time: Some(end_time.into()),
@@ -838,17 +833,17 @@ mod tests {
         Debug,
         Deserialize<'static>,
         Eq,
-        From<(Id<GuildMarker>, String, String)>,
-        From<(Id<GuildMarker>, String, String, Option<u64>)>,
-        From<(Id<GuildMarker>, String, String, u64)>,
-        From<(Id<GuildMarker>, String, String, Option<u64>, Option<u64>)>,
-        From<(Id<GuildMarker>, String, String, Option<u64>, u64)>,
-        From<(Id<GuildMarker>, String, String, u64, Option<u64>)>,
-        From<(Id<GuildMarker>, String, String, u64, u64)>,
-        From<(Id<GuildMarker>, String, String, Option<u64>, Option<u64>, bool)>,
-        From<(Id<GuildMarker>, String, String, Option<u64>, u64, bool)>,
-        From<(Id<GuildMarker>, String, String, u64, Option<u64>, bool)>,
-        From<(Id<GuildMarker>, String, String, u64, u64, bool)>,
+        From<(Id<GuildMarker>, String)>,
+        From<(Id<GuildMarker>, String, Option<u64>)>,
+        From<(Id<GuildMarker>, String, u64)>,
+        From<(Id<GuildMarker>, String, Option<u64>, Option<u64>)>,
+        From<(Id<GuildMarker>, String, Option<u64>, u64)>,
+        From<(Id<GuildMarker>, String, u64, Option<u64>)>,
+        From<(Id<GuildMarker>, String, u64, u64)>,
+        From<(Id<GuildMarker>, String, Option<u64>, Option<u64>, bool)>,
+        From<(Id<GuildMarker>, String, Option<u64>, u64, bool)>,
+        From<(Id<GuildMarker>, String, u64, Option<u64>, bool)>,
+        From<(Id<GuildMarker>, String, u64, u64, bool)>,
         PartialEq,
         Send,
         Serialize,
@@ -955,7 +950,7 @@ mod tests {
         Serialize,
         Sync,
     );
-    assert_fields!(VoiceUpdate: guild_id, session_id);
+    assert_fields!(VoiceUpdate: guild_id, voice);
     assert_impl_all!(
         VoiceUpdate: Clone,
         Debug,
@@ -989,6 +984,7 @@ mod tests {
         const SYSTEM_LOAD: f64 = 0.195_380_536_378_835_9;
 
         let expected = Stats {
+            op: crate::model::incoming::Opcode::Stats,
             cpu: StatsCpu {
                 cores: 4,
                 lavalink_load: LAVALINK_LOAD,

@@ -543,14 +543,9 @@ impl Connection {
 
         let session_id = match outgoing.clone() {
             VoiceUpdate(voice_update) => voice_update.voice.session_id,
-            Play(play) => play.session_id,
             _ => todo!(),
         };
 
-        // let payload = serde_json::to_string(&outgoing).map_err(|source| NodeError {
-        //         kind: NodeErrorType::SerializingMessage { message: outgoing.clone() },
-        //         source: Some(Box::new(source))
-        //     });
         let payload = serde_json::to_string(&outgoing).unwrap();
 
 
