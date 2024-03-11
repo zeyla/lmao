@@ -23,7 +23,6 @@ use hyper_util::rt::TokioIo;
 use crate::{
     model::{IncomingEvent, OutgoingEvent, PlayerUpdate, Stats, StatsCpu, StatsMemory},
     player::PlayerManager,
-    model::OutgoingEvent::{VoiceUpdate, Play}
 };
 use futures_util::{
     lock::BiLock,
@@ -538,9 +537,14 @@ impl Connection {
     async fn outgoing(&self, outgoing: OutgoingEvent) -> Result<(), NodeError> {
         let address = self.config.address;
         let guild_id = match outgoing.clone() {
-            VoiceUpdate(voice_update) => voice_update.guild_id,
-            Play(play) => play.guild_id,
-            _ => todo!(),
+            OutgoingEvent::VoiceUpdate(voice_update) => voice_update.guild_id,
+            OutgoingEvent::Play(play) => play.guild_id,
+            OutgoingEvent::Destroy(_destroy) => todo!("This is a unique case that has a different endpoint."),
+            OutgoingEvent::Equalizer(_equalize) => todo!("Need to implement Equalize guild_id."),
+            OutgoingEvent::Pause(_pause) => todo!("Need to implement Pause guild_id."),
+            OutgoingEvent::Seek(_seek) => todo!("Need to implement Seek guild_id."),
+            OutgoingEvent::Stop(_stop) => todo!("Need to implement Stop guild_id."),
+            OutgoingEvent::Volume(_volume) => todo!("Need to implement Volume guild_id."),
         };
         let session = self.lavalink_session_id.lock().await.clone().unwrap_or("NO_SESSION".to_string());
         let payload = serde_json::to_string(&outgoing).unwrap();
