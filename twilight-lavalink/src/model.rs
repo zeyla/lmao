@@ -273,7 +273,6 @@ pub mod outgoing {
                 paused: None,
                 track: UpdatePlayerTrack{
                     encoded: Some(track.into()),
-                    user_data: None
                 },
             }
         }
@@ -332,7 +331,6 @@ pub mod outgoing {
                 guild_id,
                 track: UpdatePlayerTrack {
                     encoded: None,
-                    user_data: None
                 },
             }
         }

@@ -54,14 +54,13 @@ pub struct Track {
 
 /// The track on the player. The encoded and identifier are mutually exclusive. Using only enocded for now.
 /// Encoded was chosen since that was previously used in the v3 implementation.
+/// We don't support userData field currently.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub struct UpdatePlayerTrack {
     /// The base64 encoded track to play. null stops the current track
     pub encoded: Option<String>,
-    /// Additional track data to be sent back in the Track Object
-    pub user_data: Option<Track>,
 
 }
 
@@ -137,7 +136,7 @@ pub enum LoadResultName {
 /// The type of search result given.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[non_exhaustive]
-#[serde(rename_all = "camelCase")]
+#[serde(untagged)]
 pub enum LoadResultData {
     /// Track result with the track info.
     Track(Track),
