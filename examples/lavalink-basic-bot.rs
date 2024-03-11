@@ -220,27 +220,6 @@ async fn play(msg: Message, state: State) -> anyhow::Result<()> {
         }
     }
 
-
-    // if let Some(track) = loaded.tracks.first() {
-    //     player.send(Play::from((guild_id, &track.track)))?;
-
-    //     let content = format!(
-    //         "Playing **{:?}** by **{:?}**",
-    //         track.info.title, track.info.author
-    //     );
-    //     state
-    //         .http
-    //         .create_message(msg.channel_id)
-    //         .content(&content)
-    //         .await?;
-    // } else {
-    //     state
-    //         .http
-    //         .create_message(msg.channel_id)
-    //         .content("Didn't find any results")
-    //         .await?;
-    // }
-
     Ok(())
 }
 
