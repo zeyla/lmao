@@ -511,7 +511,7 @@ pub mod incoming {
         /// True when the player is connected to the voice gateway.
         pub connected: bool,
         /// The ping of the node to the Discord voice server in milliseconds (-1 if not connected).
-        pub ping: bool,
+        pub ping: i64,
     }
 
     /// Dispatched by Lavalink upon successful connection and authorization. Contains fields determining if resuming was successful, as well as the session id.
