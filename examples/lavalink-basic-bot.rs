@@ -1,3 +1,4 @@
+use twilight_lavalink::http::LoadResultData::{Search, Track, Playlist};
 use http_body_util::{BodyExt, Full};
 use hyper::{body::Bytes, Request};
 use hyper_util::{
@@ -194,25 +195,51 @@ async fn play(msg: Message, state: State) -> anyhow::Result<()> {
 
     let loaded = serde_json::from_slice::<LoadedTracks>(&response_bytes)?;
 
-    if let Some(track) = loaded.tracks.first() {
-        player.send(Play::from((guild_id, &track.track)))?;
+    match loaded.data {
+        Track (track) => {
+            player.send(Play::from((guild_id, &track.encoded)))?;
 
-        let content = format!(
-            "Playing **{:?}** by **{:?}**",
-            track.info.title, track.info.author
-        );
-        state
-            .http
-            .create_message(msg.channel_id)
-            .content(&content)
-            .await?;
-    } else {
-        state
-            .http
-            .create_message(msg.channel_id)
-            .content("Didn't find any results")
-            .await?;
+            let content = format!(
+                "Playing **{:?}** by **{:?}**",
+                track.info.title, track.info.author
+            );
+            state
+                .http
+                .create_message(msg.channel_id)
+                .content(&content)
+                .await?;
+        },
+        Playlist(_) => {todo!("Write example for playlist result.")},
+        Search(_) => {todo!("Write example for search result.")},
+        _ => {
+            state
+                .http
+                .create_message(msg.channel_id)
+                .content("Didn't find any results")
+                .await?;
+        }
     }
+
+
+    // if let Some(track) = loaded.tracks.first() {
+    //     player.send(Play::from((guild_id, &track.track)))?;
+
+    //     let content = format!(
+    //         "Playing **{:?}** by **{:?}**",
+    //         track.info.title, track.info.author
+    //     );
+    //     state
+    //         .http
+    //         .create_message(msg.channel_id)
+    //         .content(&content)
+    //         .await?;
+    // } else {
+    //     state
+    //         .http
+    //         .create_message(msg.channel_id)
+    //         .content("Didn't find any results")
+    //         .await?;
+    // }
 
     Ok(())
 }

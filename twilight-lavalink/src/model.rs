@@ -1,41 +1,8 @@
 //! Models to (de)serialize incoming/outgoing websocket events and HTTP
 //! responses.
 
-use serde::{Deserialize, Serialize};
-
-/// The type of event that something is.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[non_exhaustive]
-#[serde(rename_all = "camelCase")]
-pub enum Opcode {
-    /// Destroy a player from a node.
-    Destroy,
-    /// Equalize a player.
-    Equalizer,
-    /// Meta information about a track starting or ending.
-    Event,
-    /// Pause a player.
-    Pause,
-    /// Play a track.
-    Play,
-    /// An update about a player's current track.
-    PlayerUpdate,
-    /// Seek a player's active track to a new position.
-    Seek,
-    /// Updated statistics about a node.
-    Stats,
-    /// Stop a player.
-    Stop,
-    /// A combined voice server and voice state update.
-    VoiceUpdate,
-    /// Set the volume of a player.
-    Volume,
-}
-
 pub mod outgoing {
     //! Events that clients send to Lavalink.
-
-    use super::Opcode;
     use serde::{Deserialize, Serialize};
     use twilight_model::{
         gateway::payload::incoming::VoiceServerUpdate,
@@ -120,8 +87,6 @@ pub mod outgoing {
     pub struct Destroy {
         /// The guild ID of the player.
         pub guild_id: Id<GuildMarker>,
-        /// The opcode of the event.
-        pub op: Opcode,
     }
 
     impl Destroy {
@@ -129,7 +94,6 @@ pub mod outgoing {
         pub const fn new(guild_id: Id<GuildMarker>) -> Self {
             Self {
                 guild_id,
-                op: Opcode::Destroy,
             }
         }
     }
@@ -138,10 +102,11 @@ pub mod outgoing {
         fn from(guild_id: Id<GuildMarker>) -> Self {
             Self {
                 guild_id,
-                op: Opcode::Destroy,
             }
         }
     }
+
+
 
     /// Equalize a player.
     #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -152,8 +117,6 @@ pub mod outgoing {
         pub bands: Vec<EqualizerBand>,
         /// The guild ID of the player.
         pub guild_id: Id<GuildMarker>,
-        /// The opcode of the event.
-        pub op: Opcode,
     }
 
     impl Equalizer {
@@ -168,7 +131,6 @@ pub mod outgoing {
             Self {
                 bands,
                 guild_id,
-                op: Opcode::Equalizer,
             }
         }
     }
@@ -204,8 +166,6 @@ pub mod outgoing {
     pub struct Pause {
         /// The guild ID of the player.
         pub guild_id: Id<GuildMarker>,
-        /// The opcode of the event.
-        pub op: Opcode,
         /// Whether to pause the player.
         ///
         /// Set to `true` to pause or `false` to resume.
@@ -225,7 +185,6 @@ pub mod outgoing {
         fn from((guild_id, pause): (Id<GuildMarker>, bool)) -> Self {
             Self {
                 guild_id,
-                op: Opcode::Pause,
                 pause,
             }
         }
@@ -251,8 +210,6 @@ pub mod outgoing {
         /// Set to `true` to keep playing the current playing track, or `false`
         /// to replace the current playing track with a new one.
         pub no_replace: bool,
-        /// The opcode of the event.
-        pub op: Opcode,
         /// The position in milliseconds to start the track from.
         ///
         /// For example, set to 5000 to start the track 5 seconds in.
@@ -305,7 +262,6 @@ pub mod outgoing {
                 end_time: end_time.into(),
                 guild_id,
                 no_replace,
-                op: Opcode::Play,
                 start_time: start_time.into(),
                 track: track.into(),
             }
@@ -319,8 +275,6 @@ pub mod outgoing {
     pub struct Seek {
         /// The guild ID of the player.
         pub guild_id: Id<GuildMarker>,
-        /// The opcode of the event.
-        pub op: Opcode,
         /// The position in milliseconds to seek to.
         pub position: i64,
     }
@@ -336,7 +290,6 @@ pub mod outgoing {
         fn from((guild_id, position): (Id<GuildMarker>, i64)) -> Self {
             Self {
                 guild_id,
-                op: Opcode::Seek,
                 position,
             }
         }
@@ -347,8 +300,6 @@ pub mod outgoing {
     #[non_exhaustive]
     #[serde(rename_all = "camelCase")]
     pub struct Stop {
-        /// The opcode of the event.
-        pub op: Opcode,
         /// The guild ID of the player.
         pub guild_id: Id<GuildMarker>,
     }
@@ -364,7 +315,6 @@ pub mod outgoing {
         fn from(guild_id: Id<GuildMarker>) -> Self {
             Self {
                 guild_id,
-                op: Opcode::Stop,
             }
         }
     }
@@ -378,8 +328,6 @@ pub mod outgoing {
         pub event: VoiceServerUpdate,
         /// The guild ID of the player.
         pub guild_id: Id<GuildMarker>,
-        /// The opcode of the event.
-        pub op: Opcode,
         /// The session ID of the voice channel.
         pub session_id: String,
     }
@@ -400,7 +348,6 @@ pub mod outgoing {
             Self {
                 event,
                 guild_id,
-                op: Opcode::VoiceUpdate,
                 session_id: session_id.into(),
             }
         }
@@ -413,8 +360,6 @@ pub mod outgoing {
     pub struct Volume {
         /// The guild ID of the player.
         pub guild_id: Id<GuildMarker>,
-        /// The opcode of the event.
-        pub op: Opcode,
         /// The volume of the player from 0 to 1000. 100 is the default.
         pub volume: i64,
     }
@@ -430,7 +375,6 @@ pub mod outgoing {
         fn from((guild_id, volume): (Id<GuildMarker>, i64)) -> Self {
             Self {
                 guild_id,
-                op: Opcode::Volume,
                 volume,
             }
         }
@@ -440,7 +384,7 @@ pub mod outgoing {
 pub mod incoming {
     //! Events that Lavalink sends to clients.
 
-    use super::Opcode;
+    use crate::http::{Track, Exception};
     use serde::{Deserialize, Serialize};
     use twilight_model::id::{marker::GuildMarker, Id};
 
@@ -473,17 +417,37 @@ pub mod incoming {
         }
     }
 
-    /// An update about the information of a player.
+    /// The discord voice information that lavalink uses for connection and sending information.
+    #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+    #[non_exhaustive]
+    #[serde(rename_all = "camelCase")]
+    pub struct VoiceState {
+        /// The Discord voice token to authenticate with.
+        pub token: String,
+        /// The Discord voice endpoint to connect to.
+        pub endpoint: String,
+        /// The Discord voice session id to authenticate with. Note this is seperate from the lavalink session id.
+        pub session_id: String,
+    }
+
+    /// An update about the information of a player. Filters are currently unsupported
     #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
     #[non_exhaustive]
     #[serde(rename_all = "camelCase")]
     pub struct PlayerUpdate {
         /// The guild ID of the player.
         pub guild_id: Id<GuildMarker>,
-        /// The opcode of the event.
-        pub op: Opcode,
+        /// The currently playing track.
+        pub track: Option<Track>,
+        /// The volume of the player, range 0-1000, in percentage.
+        pub volume: u64,
+        /// Whether the player is paused.
+        pub paused: bool,
         /// The new state of the player.
         pub state: PlayerUpdateState,
+        /// The voice state of the player.
+        pub voice: VoiceState,
+
     }
 
     /// New statistics about a node and its host.
@@ -516,8 +480,6 @@ pub mod incoming {
         pub players: u64,
         /// The current number of active players within the node.
         pub playing_players: u64,
-        /// The opcode of the event.
-        pub op: Opcode,
         /// The uptime of the Lavalink server in seconds.
         pub uptime: u64,
     }
@@ -578,24 +540,33 @@ pub mod incoming {
         WebsocketClosed,
     }
 
-    /// A track ended.
+    /// The reason for the track ending.
+    #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+    #[non_exhaustive]
+    #[serde(rename_all = "camelCase")]
+    pub enum TrackEndReason {
+        /// The track finished playing.
+        Finished,
+        /// The track failed to load.
+        LoadFailed,
+        /// The track was stopped.
+        Stopped,
+        /// The track was replaced
+        Replaced,
+        /// The track was cleaned up.
+        Cleanup,
+    }
+
+
+    /// A track ended event from lavalink.
     #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
     #[non_exhaustive]
     #[serde(rename_all = "camelCase")]
     pub struct TrackEnd {
-        /// The guild ID of the player.
-        pub guild_id: Id<GuildMarker>,
-        /// The type of track event.
-        #[serde(rename = "type")]
-        pub kind: TrackEventType,
-        /// The opcode of the event.
-        pub op: Opcode,
+        /// The track that ended playing.
+        pub track: Track,
         /// The reason that the track ended.
-        ///
-        /// For example, this may be `"FINISHED"`.
-        pub reason: String,
-        /// The base64 track that was affected.
-        pub track: String,
+        pub reason: TrackEndReason,
     }
 
     /// A track started.
@@ -603,42 +574,51 @@ pub mod incoming {
     #[non_exhaustive]
     #[serde(rename_all = "camelCase")]
     pub struct TrackStart {
-        /// The guild ID of the player.
-        pub guild_id: Id<GuildMarker>,
-        /// The type of track event.
-        #[serde(rename = "type")]
-        pub kind: TrackEventType,
-        /// The opcode of the event.
-        pub op: Opcode,
-        /// The base64 track that was affected.
-        pub track: String,
+        /// The track that started playing.
+        pub track: Track,
     }
+
+    /// Dispatched when a track throws an exception.
+    #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+    #[non_exhaustive]
+    #[serde(rename_all = "camelCase")]
+    pub struct TrackException {
+        /// The track that threw the exception.
+        pub track: Track,
+        /// The occurred exception.
+        pub exception: Exception,
+    }
+
+    /// Dispatched when a track gets stuck while playing.
+    #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+    #[non_exhaustive]
+    #[serde(rename_all = "camelCase")]
+    pub struct TrackStuck {
+        /// The track that got stuck.
+        pub track: Track,
+        /// The threshold in milliseconds that was exceeded.
+        pub threshold_ms: u64,
+    }
+
 
     /// The voice websocket connection to Discord has been closed.
     #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
     #[non_exhaustive]
     #[serde(rename_all = "camelCase")]
     pub struct WebsocketClosed {
-        /// Guild ID of the associated player.
-        pub guild_id: Id<GuildMarker>,
-        /// Type of track event.
-        #[serde(rename = "type")]
-        pub kind: TrackEventType,
-        /// Lavalink websocket opcode of the event.
-        pub op: Opcode,
-        /// Discord websocket opcode that closed the connection.
+        /// [Discord websocket opcode](https://discord.com/developers/docs/topics/opcodes-and-status-codes#voice-voice-close-event-codes) that closed the connection.
         pub code: u64,
-        /// True if Discord closed the connection, false if Lavalink closed it.
-        pub by_remote: bool,
         /// Reason the connection was closed.
         pub reason: String,
+        /// True if Discord closed the connection, false if Lavalink closed it.
+        pub by_remote: bool,
     }
 }
 
 pub use self::{
     incoming::{
         IncomingEvent, PlayerUpdate, PlayerUpdateState, Stats, StatsCpu, StatsFrames, StatsMemory,
-        TrackEnd, TrackEventType, TrackStart, WebsocketClosed,
+        TrackEnd, TrackEventType, TrackStart, TrackStuck, TrackException, WebsocketClosed,
     },
     outgoing::{
         Destroy, Equalizer, EqualizerBand, OutgoingEvent, Pause, Play, Seek, Stop, VoiceUpdate,
@@ -657,7 +637,6 @@ mod tests {
             Destroy, Equalizer, EqualizerBand, OutgoingEvent, Pause, Play, Seek, Stop, VoiceUpdate,
             Volume,
         },
-        Opcode,
     };
     use serde::{Deserialize, Serialize};
     use serde_test::Token;
@@ -668,7 +647,7 @@ mod tests {
         id::{marker::GuildMarker, Id},
     };
 
-    assert_fields!(Destroy: guild_id, op);
+    assert_fields!(Destroy: guild_id);
     assert_impl_all!(
         Destroy: Clone,
         Debug,
@@ -691,7 +670,7 @@ mod tests {
         Serialize,
         Sync,
     );
-    assert_fields!(Equalizer: bands, guild_id, op);
+    assert_fields!(Equalizer: bands, guild_id);
     assert_impl_all!(
         Equalizer: Clone,
         Debug,
@@ -730,7 +709,7 @@ mod tests {
         Serialize,
         Sync,
     );
-    assert_fields!(Pause: guild_id, op, pause);
+    assert_fields!(Pause: guild_id, pause);
     assert_impl_all!(
         Pause: Clone,
         Debug,
@@ -753,7 +732,7 @@ mod tests {
         Serialize,
         Sync,
     );
-    assert_fields!(PlayerUpdate: guild_id, op, state);
+    assert_fields!(PlayerUpdate: guild_id, state);
     assert_impl_all!(
         PlayerUpdate: Clone,
         Debug,
@@ -764,7 +743,7 @@ mod tests {
         Serialize,
         Sync,
     );
-    assert_fields!(Play: end_time, guild_id, no_replace, op, start_time, track);
+    assert_fields!(Play: end_time, guild_id, no_replace, start_time, track);
     assert_impl_all!(
         Play: Clone,
         Debug,
@@ -786,7 +765,7 @@ mod tests {
         Serialize,
         Sync,
     );
-    assert_fields!(Seek: guild_id, op, position);
+    assert_fields!(Seek: guild_id, position);
     assert_impl_all!(
         Seek: Clone,
         Debug,
@@ -804,7 +783,6 @@ mod tests {
         memory,
         players,
         playing_players,
-        op,
         uptime
     );
     assert_impl_all!(
@@ -846,7 +824,7 @@ mod tests {
         Serialize,
         Sync,
     );
-    assert_fields!(Stop: guild_id, op);
+    assert_fields!(Stop: guild_id);
     assert_impl_all!(
         Stop: Clone,
         Debug,
@@ -858,7 +836,7 @@ mod tests {
         Serialize,
         Sync,
     );
-    assert_fields!(TrackEnd: guild_id, kind, op, reason, track);
+    assert_fields!(TrackEnd: reason, track);
     assert_impl_all!(
         TrackEnd: Clone,
         Debug,
@@ -878,7 +856,7 @@ mod tests {
         Serialize,
         Sync,
     );
-    assert_fields!(TrackStart: guild_id, kind, op, track);
+    assert_fields!(TrackStart: track);
     assert_impl_all!(
         TrackStart: Clone,
         Debug,
@@ -888,7 +866,7 @@ mod tests {
         Serialize,
         Sync,
     );
-    assert_fields!(WebsocketClosed: guild_id, kind, op, code, reason, by_remote);
+    assert_fields!(WebsocketClosed: code, reason, by_remote);
     assert_impl_all!(
         WebsocketClosed: Clone,
         Debug,
@@ -898,7 +876,7 @@ mod tests {
         Serialize,
         Sync,
     );
-    assert_fields!(VoiceUpdate: event, guild_id, op, session_id);
+    assert_fields!(VoiceUpdate: event, guild_id, session_id);
     assert_impl_all!(
         VoiceUpdate: Clone,
         Debug,
@@ -910,7 +888,7 @@ mod tests {
         Serialize,
         Sync,
     );
-    assert_fields!(Volume: guild_id, op, volume);
+    assert_fields!(Volume: guild_id, volume);
     assert_impl_all!(
         Volume: Clone,
         Debug,
@@ -946,7 +924,6 @@ mod tests {
             },
             players: 0,
             playing_players: 0,
-            op: Opcode::Stats,
             uptime: 18589,
         };
 

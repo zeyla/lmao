@@ -18,7 +18,7 @@
 //! [`Lavalink`]: crate::client::Lavalink
 
 use crate::{
-    model::{IncomingEvent, Opcode, OutgoingEvent, PlayerUpdate, Stats, StatsCpu, StatsMemory},
+    model::{IncomingEvent, OutgoingEvent, PlayerUpdate, Stats, StatsCpu, StatsMemory},
     player::PlayerManager,
 };
 use futures_util::{
@@ -375,7 +375,6 @@ impl Node {
             },
             players: 0,
             playing_players: 0,
-            op: Opcode::Stats,
             uptime: 0,
         });
 
