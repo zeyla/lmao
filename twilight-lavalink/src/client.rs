@@ -350,6 +350,14 @@ impl Lavalink {
         &self.players
     }
 
+    /// Find the session for this guild
+    pub fn lookup_session(&self, guild_id: Id<GuildMarker>) -> Option<String> {
+        match self.sessions.get(&guild_id) {
+            Some(session_id) => Some(session_id.to_string()),
+            None => None,
+        }
+    }
+
     /// Retrieve a player for the guild.
     ///
     /// Creates a player configured to use the best available node if a player

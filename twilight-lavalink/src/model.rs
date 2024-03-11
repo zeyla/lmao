@@ -216,6 +216,9 @@ pub mod outgoing {
         /// The guild ID of the player.
         #[serde(skip_serializing)]
         pub guild_id: Id<GuildMarker>,
+        /// The lavalink session id to send this event to.
+        #[serde(skip_serializing)]
+        pub session_id: String,
         /// Whether or not to replace the currently playing track with this new
         /// track.
         ///
@@ -229,43 +232,45 @@ pub mod outgoing {
         /// Create a new play event.
         pub fn new(
             guild_id: Id<GuildMarker>,
+            session_id: impl Into<String>,
             track: impl Into<String>,
             start_time: impl Into<Option<u64>>,
             end_time: impl Into<Option<u64>>,
             no_replace: bool,
         ) -> Self {
-            Self::from((guild_id, track, start_time, end_time, no_replace))
+            Self::from((guild_id, session_id, track, start_time, end_time, no_replace))
         }
     }
 
-    impl<T: Into<String>> From<(Id<GuildMarker>, T)> for Play {
-        fn from((guild_id, track): (Id<GuildMarker>, T)) -> Self {
-            Self::from((guild_id, track, None, None, true))
+    impl<T: Into<String>, I: Into<String>> From<(Id<GuildMarker>, I, T)> for Play {
+        fn from((guild_id, session_id, track): (Id<GuildMarker>, I, T)) -> Self {
+            Self::from((guild_id, session_id, track, None, None, true))
         }
     }
 
-    impl<T: Into<String>, S: Into<Option<u64>>> From<(Id<GuildMarker>, T, S)> for Play {
-        fn from((guild_id, track, start_time): (Id<GuildMarker>, T, S)) -> Self {
-            Self::from((guild_id, track, start_time, None, true))
+    impl<T: Into<String>, I: Into<String>, S: Into<Option<u64>>> From<(Id<GuildMarker>, I, T, S)> for Play {
+        fn from((guild_id, session_id, track, start_time): (Id<GuildMarker>, I, T, S)) -> Self {
+            Self::from((guild_id, session_id, track, start_time, None, true))
         }
     }
 
-    impl<T: Into<String>, S: Into<Option<u64>>, E: Into<Option<u64>>>
-        From<(Id<GuildMarker>, T, S, E)> for Play
+    impl<T: Into<String>, I: Into<String>, S: Into<Option<u64>>, E: Into<Option<u64>>>
+        From<(Id<GuildMarker>, I, T, S, E)> for Play
     {
-        fn from((guild_id, track, start_time, end_time): (Id<GuildMarker>, T, S, E)) -> Self {
-            Self::from((guild_id, track, start_time, end_time, true))
+        fn from((guild_id, session_id, track, start_time, end_time): (Id<GuildMarker>, I, T, S, E)) -> Self {
+            Self::from((guild_id, session_id, track, start_time, end_time, true))
         }
     }
 
-    impl<T: Into<String>, S: Into<Option<u64>>, E: Into<Option<u64>>>
-        From<(Id<GuildMarker>, T, S, E, bool)> for Play
+    impl<T: Into<String>, I: Into<String>, S: Into<Option<u64>>, E: Into<Option<u64>>>
+        From<(Id<GuildMarker>, I, T, S, E, bool)> for Play
     {
         fn from(
-            (guild_id, track, start_time, end_time, no_replace): (Id<GuildMarker>, T, S, E, bool),
+            (guild_id, session_id, track, start_time, end_time, no_replace): (Id<GuildMarker>, I, T, S, E, bool),
         ) -> Self {
             Self {
                 guild_id,
+                session_id: session_id.into(),
                 no_replace,
                 position: start_time.into(),
                 end_time: Some(end_time.into()),
@@ -337,6 +342,18 @@ pub mod outgoing {
             }
         }
     }
+    /// The voice payload for the combined server and state to send to lavalink.
+    #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+    #[non_exhaustive]
+    #[serde(rename_all = "camelCase")]
+    pub struct Voice {
+        /// The Discord voice token to authenticate with.
+        pub token: String,
+        /// The Discord voice endpoint to connect to.
+        pub endpoint: String,
+        /// The Discord voice session id to authenticate with. This is seperate from the session id of lavalink.
+        pub session_id: String,
+    }
 
     /// A combined voice server and voice state update.
     #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -346,12 +363,8 @@ pub mod outgoing {
         /// The guild ID of the player.
         #[serde(skip_serializing)]
         pub guild_id: Id<GuildMarker>,
-        /// The Discord voice token to authenticate with.
-        pub token: String,
-        /// The Discord voice endpoint to connect to.
-        pub endpoint: String,
-        /// The Discord voice session id to authenticate with. This is seperate from the session id of lavalink.
-        pub session_id: String,
+        /// The voice payload for the combined server and state to send to lavalink.
+        pub voice: Voice,
     }
 
     impl VoiceUpdate {
@@ -369,9 +382,11 @@ pub mod outgoing {
         fn from((guild_id, session_id, event): (Id<GuildMarker>, T, VoiceServerUpdate)) -> Self {
             Self {
                 guild_id: guild_id,
-                token: event.token,
-                endpoint: event.endpoint.unwrap_or("NO_ENDPOINT_RETURNED".to_string()),
-                session_id: session_id.into(),
+                voice: Voice{
+                    token: event.token,
+                    endpoint: event.endpoint.unwrap_or("NO_ENDPOINT_RETURNED".to_string()),
+                    session_id: session_id.into(),
+                }
             }
         }
     }
@@ -408,6 +423,22 @@ pub mod outgoing {
 pub mod incoming {
     //! Events that Lavalink sends to clients.
 
+    /// The type of event that something is.
+    #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+    #[non_exhaustive]
+    #[serde(rename_all = "camelCase")]
+    pub enum Opcode {
+        /// Lavalink is connected and ready.
+        Ready,
+        /// An update about a player's current track.
+        PlayerUpdate,
+        /// Updated statistics about a node.
+        Stats,
+        /// Meta information about a track starting or ending.
+        Event,
+    }
+
+
     use crate::http::{Track, Exception};
     use serde::{Deserialize, Serialize};
     use twilight_model::id::{marker::GuildMarker, Id};
@@ -417,17 +448,22 @@ pub mod incoming {
     #[non_exhaustive]
     #[serde(untagged)]
     pub enum IncomingEvent {
+        /// Dispatched when you successfully connect to the Lavalink node.
+        Ready(Ready),
         /// An update about the information of a player.
         PlayerUpdate(PlayerUpdate),
         /// New statistics about a node and its host.
         Stats(Stats),
-        /// A track ended.
-        TrackEnd(TrackEnd),
-        /// A track started.
-        TrackStart(TrackStart),
-        /// The voice websocket connection was closed.
-        WeboscketClosed(WebsocketClosed),
+        // /// Dispatched when player or voice events occur.
+        // Event(Event),
     }
+
+    impl From<Ready> for IncomingEvent {
+        fn from(event: Ready) -> IncomingEvent {
+            Self::Ready(event)
+        }
+    }
+
 
     impl From<PlayerUpdate> for IncomingEvent {
         fn from(event: PlayerUpdate) -> IncomingEvent {
@@ -459,18 +495,12 @@ pub mod incoming {
     #[non_exhaustive]
     #[serde(rename_all = "camelCase")]
     pub struct PlayerUpdate {
+        /// Op code for this websocket event.
+        pub op: Opcode,
         /// The guild ID of the player.
         pub guild_id: Id<GuildMarker>,
-        /// The currently playing track.
-        pub track: Option<Track>,
-        /// The volume of the player, range 0-1000, in percentage.
-        pub volume: u64,
-        /// Whether the player is paused.
-        pub paused: bool,
         /// The new state of the player.
         pub state: PlayerUpdateState,
-        /// The voice state of the player.
-        pub voice: VoiceState,
 
     }
 
@@ -479,12 +509,27 @@ pub mod incoming {
     #[non_exhaustive]
     #[serde(rename_all = "camelCase")]
     pub struct PlayerUpdateState {
-        /// True when the player is connected to the voice gateway.
-        pub connected: bool,
         /// Unix timestamp of the player in milliseconds.
         pub time: i64,
         /// Track position in milliseconds. None if not playing anything.
-        pub position: Option<i64>,
+        pub position: i64,
+        /// True when the player is connected to the voice gateway.
+        pub connected: bool,
+        /// The ping of the node to the Discord voice server in milliseconds (-1 if not connected).
+        pub ping: bool,
+    }
+
+    /// Dispatched by Lavalink upon successful connection and authorization. Contains fields determining if resuming was successful, as well as the session id.
+    #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+    #[non_exhaustive]
+    #[serde(rename_all = "camelCase")]
+    pub struct Ready {
+        /// Op code for this websocket event.
+        pub op: Opcode,
+        /// Whether this session was resumed.
+        pub resumed: bool,
+        /// The Lavalink session id of this connection. Not to be confused with a Discord voice session id.
+        pub session_id: String,
     }
 
     /// Statistics about a node and its host.
@@ -492,11 +537,13 @@ pub mod incoming {
     #[non_exhaustive]
     #[serde(rename_all = "camelCase")]
     pub struct Stats {
+        /// Op code for this websocket event.
+        pub op: Opcode,
         /// CPU information about the node's host.
         pub cpu: StatsCpu,
         /// Statistics about audio frames.
         #[serde(rename = "frameStats", skip_serializing_if = "Option::is_none")]
-        pub frames: Option<StatsFrames>,
+        pub frame_stats: Option<StatsFrames>,
         /// Memory information about the node's host.
         pub memory: StatsMemory,
         /// The current number of total players (active and not active) within
@@ -549,20 +596,38 @@ pub mod incoming {
         pub used: u64,
     }
 
-    /// The type of track event that was received.
+    /// Server dispatched an event.
     #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
     #[non_exhaustive]
-    pub enum TrackEventType {
-        /// A track for a player ended.
-        #[serde(rename = "TrackEndEvent")]
-        End,
-        /// A track for a player started.
-        #[serde(rename = "TrackStartEvent")]
-        Start,
-        /// The voice websocket connection to Discord has been closed.
-        #[serde(rename = "WebSocketClosedEvent")]
-        WebsocketClosed,
+    pub enum EventType {
+        /// Dispatched when a track starts playing.
+        TrackStartEvent,
+        /// Dispatched when a track ends.
+        TrackEndEvent,
+        /// Dispatched when a track throws an exception.
+        TrackExceptionEvent,
+        /// Dispatched when a track gets stuck while playing.
+        TrackStuckEvent,
+        /// Dispatched when the websocket connection to Discord voice servers is closed.
+        WebsocketClosedEvent,
     }
+
+    /// Server dispatched an event.
+    #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+    #[non_exhaustive]
+    pub enum EventData {
+        /// Dispatched when a track starts playing.
+        TrackStartEvent(TrackStart),
+        /// Dispatched when a track ends.
+        TrackEndEvent(TrackEnd),
+        /// Dispatched when a track throws an exception.
+        TrackExceptionEvent(TrackException),
+        /// Dispatched when a track gets stuck while playing.
+        TrackStuckEvent(TrackStuck),
+        /// Dispatched when the websocket connection to Discord voice servers is closed.
+        WebsocketClosedEvent(WebsocketClosed),
+    }
+
 
     /// The reason for the track ending.
     #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -642,7 +707,7 @@ pub mod incoming {
 pub use self::{
     incoming::{
         IncomingEvent, PlayerUpdate, PlayerUpdateState, Stats, StatsCpu, StatsFrames, StatsMemory,
-        TrackEnd, TrackEventType, TrackStart, TrackStuck, TrackException, WebsocketClosed,
+        TrackEnd, TrackStart, TrackStuck, TrackException, WebsocketClosed,
     },
     outgoing::{
         Destroy, Equalizer, EqualizerBand, OutgoingEvent, Pause, Play, Seek, Stop, VoiceUpdate,
@@ -655,7 +720,7 @@ mod tests {
     use super::{
         incoming::{
             IncomingEvent, PlayerUpdate, PlayerUpdateState, Stats, StatsCpu, StatsFrames,
-            StatsMemory, TrackEnd, TrackEventType, TrackStart, WebsocketClosed,
+            StatsMemory, TrackEnd, TrackStart, WebsocketClosed,
         },
         outgoing::{
             Destroy, Equalizer, EqualizerBand, OutgoingEvent, Pause, Play, Seek, Stop, VoiceUpdate,
@@ -733,7 +798,7 @@ mod tests {
         Serialize,
         Sync,
     );
-    assert_fields!(Pause: guild_id, pause);
+    assert_fields!(Pause: guild_id, paused);
     assert_impl_all!(
         Pause: Clone,
         Debug,
@@ -767,23 +832,23 @@ mod tests {
         Serialize,
         Sync,
     );
-    assert_fields!(Play: end_time, guild_id, no_replace, start_time, track);
+    assert_fields!(Play: end_time, guild_id, no_replace, position, track);
     assert_impl_all!(
         Play: Clone,
         Debug,
         Deserialize<'static>,
         Eq,
-        From<(Id<GuildMarker>, String)>,
-        From<(Id<GuildMarker>, String, Option<u64>)>,
-        From<(Id<GuildMarker>, String, u64)>,
-        From<(Id<GuildMarker>, String, Option<u64>, Option<u64>)>,
-        From<(Id<GuildMarker>, String, Option<u64>, u64)>,
-        From<(Id<GuildMarker>, String, u64, Option<u64>)>,
-        From<(Id<GuildMarker>, String, u64, u64)>,
-        From<(Id<GuildMarker>, String, Option<u64>, Option<u64>, bool)>,
-        From<(Id<GuildMarker>, String, Option<u64>, u64, bool)>,
-        From<(Id<GuildMarker>, String, u64, Option<u64>, bool)>,
-        From<(Id<GuildMarker>, String, u64, u64, bool)>,
+        From<(Id<GuildMarker>, String, String)>,
+        From<(Id<GuildMarker>, String, String, Option<u64>)>,
+        From<(Id<GuildMarker>, String, String, u64)>,
+        From<(Id<GuildMarker>, String, String, Option<u64>, Option<u64>)>,
+        From<(Id<GuildMarker>, String, String, Option<u64>, u64)>,
+        From<(Id<GuildMarker>, String, String, u64, Option<u64>)>,
+        From<(Id<GuildMarker>, String, String, u64, u64)>,
+        From<(Id<GuildMarker>, String, String, Option<u64>, Option<u64>, bool)>,
+        From<(Id<GuildMarker>, String, String, Option<u64>, u64, bool)>,
+        From<(Id<GuildMarker>, String, String, u64, Option<u64>, bool)>,
+        From<(Id<GuildMarker>, String, String, u64, u64, bool)>,
         PartialEq,
         Send,
         Serialize,
@@ -803,7 +868,7 @@ mod tests {
     );
     assert_fields!(
         Stats: cpu,
-        frames,
+        frame_stats,
         memory,
         players,
         playing_players,
@@ -870,16 +935,6 @@ mod tests {
         Serialize,
         Sync,
     );
-    assert_impl_all!(
-        TrackEventType: Clone,
-        Copy,
-        Debug,
-        Deserialize<'static>,
-        PartialEq,
-        Send,
-        Serialize,
-        Sync,
-    );
     assert_fields!(TrackStart: track);
     assert_impl_all!(
         TrackStart: Clone,
@@ -900,7 +955,7 @@ mod tests {
         Serialize,
         Sync,
     );
-    assert_fields!(VoiceUpdate: event, guild_id, session_id);
+    assert_fields!(VoiceUpdate: guild_id, session_id);
     assert_impl_all!(
         VoiceUpdate: Clone,
         Debug,
@@ -939,7 +994,7 @@ mod tests {
                 lavalink_load: LAVALINK_LOAD,
                 system_load: SYSTEM_LOAD,
             },
-            frames: None,
+            frame_stats: None,
             memory: StatsMemory {
                 allocated: MEM_ALLOCATED,
                 free: MEM_FREE,

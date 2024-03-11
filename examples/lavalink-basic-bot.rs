@@ -197,7 +197,7 @@ async fn play(msg: Message, state: State) -> anyhow::Result<()> {
 
     match loaded.data {
         Track (track) => {
-            player.send(Play::from((guild_id, &track.encoded)))?;
+            player.send(Play::from((guild_id, state.lavalink.lookup_session(guild_id).unwrap(), &track.encoded)))?;
 
             let content = format!(
                 "Playing **{:?}** by **{:?}**",

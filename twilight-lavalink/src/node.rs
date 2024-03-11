@@ -17,16 +17,20 @@
 //!
 //! [`Lavalink`]: crate::client::Lavalink
 
+use hyper::{Request, Method};
+use hyper_util::rt::TokioIo;
+
 use crate::{
     model::{IncomingEvent, OutgoingEvent, PlayerUpdate, Stats, StatsCpu, StatsMemory},
     player::PlayerManager,
+    model::OutgoingEvent::{VoiceUpdate, Play}
 };
 use futures_util::{
     lock::BiLock,
     sink::SinkExt,
     stream::{Stream, StreamExt},
 };
-use http::header::{HeaderName, AUTHORIZATION};
+use http::header::{HeaderName, HeaderValue, AUTHORIZATION};
 use std::{
     error::Error,
     fmt::{Debug, Display, Formatter, Result as FmtResult},
@@ -361,12 +365,13 @@ impl Node {
         players: PlayerManager,
     ) -> Result<(Self, IncomingEvents), NodeError> {
         let (bilock_left, bilock_right) = BiLock::new(Stats {
+            op: crate::model::incoming::Opcode::Stats,
             cpu: StatsCpu {
                 cores: 0,
                 lavalink_load: 0f64,
                 system_load: 0f64,
             },
-            frames: None,
+            frame_stats: None,
             memory: StatsMemory {
                 allocated: 0,
                 free: 0,
@@ -447,11 +452,11 @@ impl Node {
 
         let (deficit_frame, null_frame) = (
             1.03f64
-                .powf(500f64 * (stats.frames.as_ref().map_or(0, |f| f.deficit) as f64 / 3000f64))
+                .powf(500f64 * (stats.frame_stats.as_ref().map_or(0, |f| f.deficit) as f64 / 3000f64))
                 * 300f64
                 - 300f64,
             (1.03f64
-                .powf(500f64 * (stats.frames.as_ref().map_or(0, |f| f.nulled) as f64 / 3000f64))
+                .powf(500f64 * (stats.frame_stats.as_ref().map_or(0, |f| f.nulled) as f64 / 3000f64))
                 * 300f64
                 - 300f64)
                 * 2f64,
@@ -515,17 +520,7 @@ impl Connection {
                 }
                 outgoing = self.node_from.recv() => {
                     if let Some(outgoing) = outgoing {
-                        tracing::debug!(
-                            "forwarding event to {}: {outgoing:?}",
-                            self.config.address,
-                        );
-
-                        let payload = serde_json::to_string(&outgoing).map_err(|source| NodeError {
-                            kind: NodeErrorType::SerializingMessage { message: outgoing },
-                            source: Some(Box::new(source)),
-                        })?;
-                        let msg = Message::text(payload);
-                        self.stream.send(msg).await.unwrap();
+                        self.outgoing(outgoing).await?;
                     } else {
                         tracing::debug!("node {} closed, ending connection", self.config.address);
 
@@ -535,6 +530,82 @@ impl Connection {
             }
         }
 
+        Ok(())
+    }
+
+    async fn outgoing(&self, outgoing: OutgoingEvent) -> Result<(), NodeError> {
+        let address = self.config.address;
+        let guild_id = match outgoing.clone() {
+            VoiceUpdate(voice_update) => voice_update.guild_id,
+            Play(play) => play.guild_id,
+            _ => todo!(),
+        };
+
+        let session_id = match outgoing.clone() {
+            VoiceUpdate(voice_update) => voice_update.voice.session_id,
+            Play(play) => play.session_id,
+            _ => todo!(),
+        };
+
+        // let payload = serde_json::to_string(&outgoing).map_err(|source| NodeError {
+        //         kind: NodeErrorType::SerializingMessage { message: outgoing.clone() },
+        //         source: Some(Box::new(source))
+        //     });
+        let payload = serde_json::to_string(&outgoing).unwrap();
+
+
+        tracing::debug!(
+            "forwarding event to {}: {outgoing:?}",
+            address,
+        );
+        let url = format!("http://{address}/v4/sessions/{}/players/{guild_id}?noReplace=true", session_id.clone()).parse::<hyper::Uri>().unwrap();
+
+        tracing::debug!(
+            "converted payload: {payload:?}"
+            );
+
+        // Get the host and the port
+        let host = url.host().expect("uri has no host");
+        let port = url.port_u16().unwrap_or(80);
+
+        let address = format!("{}:{}", host, port);
+
+        // Open a TCP connection to the remote host
+        let stream = TcpStream::connect(address).await.unwrap();
+
+        // Use an adapter to access something implementing `tokio::io` traits as if they implement
+        // `hyper::rt` IO traits.
+        let io = TokioIo::new(stream);
+
+        // Create the Hyper client
+        let (mut sender, conn) = hyper::client::conn::http1::handshake(io).await.unwrap();
+        tokio::task::spawn(async move {
+            if let Err(err) = conn.await {
+                println!("Connection failed: {:?}", err);
+            }
+        });
+
+        // The authority of our URL will be the hostname of the httpbin remote
+        let authority = url.authority().unwrap().clone();
+
+        // Create an HTTP request with an empty body and a HOST header
+        let req = Request::builder()
+            .uri(url)
+            .method(Method::PATCH)
+            .header(hyper::header::HOST, authority.as_str())
+            .header(AUTHORIZATION, self.config.authorization.as_str())
+            .header("Content-Type", "application/json")
+            .body(payload)
+            .unwrap();
+
+        tracing::debug!(
+            "Request: {req:?}"
+            );
+
+        // Await the response...
+        let res = sender.send_request(req).await.unwrap();
+
+        tracing::debug!("Response status: {}", res.status());
         Ok(())
     }
 
@@ -587,7 +658,7 @@ impl Connection {
             return Ok(());
         };
 
-        player.set_position(update.state.position.unwrap_or(0));
+        player.set_position(update.state.position);
         player.set_time(update.state.time);
 
         Ok(())
@@ -610,8 +681,11 @@ impl Drop for Connection {
 }
 
 fn connect_request(state: &NodeConfig) -> Result<ClientBuilder, NodeError> {
+    let crate_version = env!("CARGO_PKG_VERSION");
+    let client_name = format!("twilight-lavalink/{}", crate_version);
+
     let mut builder = ClientBuilder::new()
-        .uri(&format!("ws://{}", state.address))
+        .uri(&format!("ws://{}/v4/websocket", state.address))
         .map_err(|source| NodeError {
             kind: NodeErrorType::BuildingConnectionRequest,
             source: Some(Box::new(source)),
@@ -620,6 +694,10 @@ fn connect_request(state: &NodeConfig) -> Result<ClientBuilder, NodeError> {
         .add_header(
             HeaderName::from_static("user-id"),
             state.user_id.get().into(),
+        )
+        .add_header(
+            HeaderName::from_static("client-name"),
+            HeaderValue::from_str(&client_name).unwrap(),
         );
 
     if state.resume.is_some() {
