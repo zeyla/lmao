@@ -473,6 +473,7 @@ struct Connection {
     node_to: UnboundedSender<IncomingEvent>,
     players: PlayerManager,
     stats: BiLock<Stats>,
+    lavalink_session_id: BiLock<Option<String>>,
 }
 
 impl Connection {
@@ -501,6 +502,7 @@ impl Connection {
                 node_to: to_node,
                 players,
                 stats,
+                lavalink_session_id: BiLock::new(None).0,
             },
             to_lavalink,
             from_lavalink,
@@ -540,20 +542,14 @@ impl Connection {
             Play(play) => play.guild_id,
             _ => todo!(),
         };
-
-        let session_id = match outgoing.clone() {
-            VoiceUpdate(voice_update) => voice_update.voice.session_id,
-            _ => todo!(),
-        };
-
+        let session = self.lavalink_session_id.lock().await.clone().unwrap_or("NO_SESSION".to_string());
         let payload = serde_json::to_string(&outgoing).unwrap();
-
 
         tracing::debug!(
             "forwarding event to {}: {outgoing:?}",
             address,
         );
-        let url = format!("http://{address}/v4/sessions/{}/players/{guild_id}?noReplace=true", session_id.clone()).parse::<hyper::Uri>().unwrap();
+        let url = format!("http://{address}/v4/sessions/{session}/players/{guild_id}?noReplace=true").parse::<hyper::Uri>().unwrap();
 
         tracing::debug!(
             "converted payload: {payload:?}"
@@ -630,8 +626,8 @@ impl Connection {
 
         match &event {
             IncomingEvent::PlayerUpdate(update) => self.player_update(update)?,
+            IncomingEvent::Ready(ready) => *self.lavalink_session_id.lock().await = Some(ready.session_id.clone()),
             IncomingEvent::Stats(stats) => self.stats(stats).await?,
-            _ => {}
         }
 
         // It's fine if the rx end dropped, often users don't need to care about
