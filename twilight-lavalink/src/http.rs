@@ -53,14 +53,15 @@ pub struct Track {
 }
 
 /// The track on the player. The encoded and identifier are mutually exclusive. Using only enocded for now.
+/// Encoded was chosen since that was previously used in the v3 implementation.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub struct UpdatePlayerTrack {
     /// The base64 encoded track to play. null stops the current track
-    pub encoded: String,
+    pub encoded: Option<String>,
     /// Additional track data to be sent back in the Track Object
-    pub user_data: Track,
+    pub user_data: Option<Track>,
 
 }
 
@@ -380,7 +381,7 @@ pub fn get_route_planner(
     address: SocketAddr,
     authorization: impl AsRef<str>,
 ) -> Result<Request<&'static [u8]>, HttpError> {
-    let mut req = Request::get(format!("{address}/routeplanner/status"));
+    let mut req = Request::get(format!("{address}/v4/routeplanner/status"));
 
     let auth_value = HeaderValue::from_str(authorization.as_ref())?;
     req = req.header(AUTHORIZATION, auth_value);
@@ -401,7 +402,7 @@ pub fn unmark_failed_address(
     authorization: impl AsRef<str>,
     route_address: impl Into<IpAddr>,
 ) -> Result<Request<Vec<u8>>, HttpError> {
-    let mut req = Request::post(format!("{}/routeplanner/status", node_address.into()));
+    let mut req = Request::post(format!("{}/v4/routeplanner/status", node_address.into()));
 
     let auth_value = HeaderValue::from_str(authorization.as_ref())?;
     req = req.header(AUTHORIZATION, auth_value);

@@ -9,6 +9,8 @@ pub mod outgoing {
         id::{marker::GuildMarker, Id},
     };
 
+    use crate::http::UpdatePlayerTrack;
+
     /// An outgoing event to send to Lavalink.
     #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
     #[non_exhaustive]
@@ -169,7 +171,7 @@ pub mod outgoing {
         /// Whether to pause the player.
         ///
         /// Set to `true` to pause or `false` to resume.
-        pub pause: bool,
+        pub paused: bool,
     }
 
     impl Pause {
@@ -185,38 +187,42 @@ pub mod outgoing {
         fn from((guild_id, pause): (Id<GuildMarker>, bool)) -> Self {
             Self {
                 guild_id,
-                pause,
+                paused: pause,
             }
         }
     }
 
-    /// Play a track, optionally specifying to not skip the current track.
+
+    // TODO: Might need to fix this struct to abstract the guild_id to another struct pending on what the server sends back with it included.
+    /// Play a track, optionally specifying to not skip the current track. Filters are not supported at the moment.
     #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
     #[non_exhaustive]
     #[serde(rename_all = "camelCase")]
     pub struct Play {
-        /// The position in milliseconds to end the track.
-        ///
-        /// This currently [does nothing] as of this writing.
-        ///
-        /// [does nothing]: https://github.com/freyacodes/Lavalink/issues/179
+        /// Information about the track to play.
+        pub track: UpdatePlayerTrack,
+        /// The position in milliseconds to start the track from.
         #[serde(skip_serializing_if = "Option::is_none")]
-        pub end_time: Option<u64>,
+        pub position: Option<u64>,
+        /// The position in milliseconds to end the track.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub end_time: Option<Option<u64>>,
+        /// The player volume, in percentage, from 0 to 1000
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub volume: Option<u64>,
+        ///     Whether the player is paused
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub paused: Option<bool>,
         /// The guild ID of the player.
+        #[serde(skip_serializing)]
         pub guild_id: Id<GuildMarker>,
         /// Whether or not to replace the currently playing track with this new
         /// track.
         ///
         /// Set to `true` to keep playing the current playing track, or `false`
         /// to replace the current playing track with a new one.
+        #[serde(skip_serializing)]
         pub no_replace: bool,
-        /// The position in milliseconds to start the track from.
-        ///
-        /// For example, set to 5000 to start the track 5 seconds in.
-        #[serde(skip_serializing_if = "Option::is_none")]
-        pub start_time: Option<u64>,
-        /// The base64 track information.
-        pub track: String,
     }
 
     impl Play {
@@ -259,11 +265,16 @@ pub mod outgoing {
             (guild_id, track, start_time, end_time, no_replace): (Id<GuildMarker>, T, S, E, bool),
         ) -> Self {
             Self {
-                end_time: end_time.into(),
                 guild_id,
                 no_replace,
-                start_time: start_time.into(),
-                track: track.into(),
+                position: start_time.into(),
+                end_time: Some(end_time.into()),
+                volume: None,
+                paused: None,
+                track: UpdatePlayerTrack{
+                    encoded: Some(track.into()),
+                    user_data: None
+                },
             }
         }
     }
@@ -274,6 +285,7 @@ pub mod outgoing {
     #[serde(rename_all = "camelCase")]
     pub struct Seek {
         /// The guild ID of the player.
+        #[serde(skip_serializing)]
         pub guild_id: Id<GuildMarker>,
         /// The position in milliseconds to seek to.
         pub position: i64,
@@ -301,7 +313,10 @@ pub mod outgoing {
     #[serde(rename_all = "camelCase")]
     pub struct Stop {
         /// The guild ID of the player.
+        #[serde(skip_serializing)]
         pub guild_id: Id<GuildMarker>,
+        /// The track object to pass set to null
+        pub track: UpdatePlayerTrack,
     }
 
     impl Stop {
@@ -315,6 +330,10 @@ pub mod outgoing {
         fn from(guild_id: Id<GuildMarker>) -> Self {
             Self {
                 guild_id,
+                track: UpdatePlayerTrack {
+                    encoded: None,
+                    user_data: None
+                },
             }
         }
     }
@@ -324,11 +343,14 @@ pub mod outgoing {
     #[non_exhaustive]
     #[serde(rename_all = "camelCase")]
     pub struct VoiceUpdate {
-        /// The inner event being forwarded to a node.
-        pub event: VoiceServerUpdate,
         /// The guild ID of the player.
+        #[serde(skip_serializing)]
         pub guild_id: Id<GuildMarker>,
-        /// The session ID of the voice channel.
+        /// The Discord voice token to authenticate with.
+        pub token: String,
+        /// The Discord voice endpoint to connect to.
+        pub endpoint: String,
+        /// The Discord voice session id to authenticate with. This is seperate from the session id of lavalink.
         pub session_id: String,
     }
 
@@ -346,8 +368,9 @@ pub mod outgoing {
     impl<T: Into<String>> From<(Id<GuildMarker>, T, VoiceServerUpdate)> for VoiceUpdate {
         fn from((guild_id, session_id, event): (Id<GuildMarker>, T, VoiceServerUpdate)) -> Self {
             Self {
-                event,
-                guild_id,
+                guild_id: guild_id,
+                token: event.token,
+                endpoint: event.endpoint.unwrap_or("NO_ENDPOINT_RETURNED".to_string()),
                 session_id: session_id.into(),
             }
         }
@@ -359,6 +382,7 @@ pub mod outgoing {
     #[serde(rename_all = "camelCase")]
     pub struct Volume {
         /// The guild ID of the player.
+        #[serde(skip_serializing)]
         pub guild_id: Id<GuildMarker>,
         /// The volume of the player from 0 to 1000. 100 is the default.
         pub volume: i64,
