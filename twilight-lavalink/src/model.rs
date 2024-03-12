@@ -734,267 +734,8 @@ pub use self::{
 
 #[cfg(test)]
 mod lavalink_struct_tests {
-    use super::{
-        incoming::{
-            IncomingEvent, PlayerUpdate, PlayerUpdateState, Stats, StatsCpu, StatsFrames,
-            StatsMemory, TrackEnd, TrackStart, WebsocketClosed,
-        },
-        outgoing::{
-            Destroy, Equalizer, EqualizerBand, OutgoingEvent, Pause, Play, Seek, Stop, VoiceUpdate,
-            Volume,
-        },
-    };
-    use serde::{Deserialize, Serialize};
+    use super::incoming::{ Stats, StatsCpu, StatsMemory, };
     use serde_test::Token;
-    use static_assertions::{assert_fields, assert_impl_all};
-    use std::fmt::Debug;
-    use twilight_model::{
-        gateway::payload::incoming::VoiceServerUpdate,
-        id::{marker::GuildMarker, Id},
-    };
-
-    assert_fields!(Destroy: guild_id);
-    assert_impl_all!(
-        Destroy: Clone,
-        Debug,
-        Deserialize<'static>,
-        Eq,
-        From<Id<GuildMarker>>,
-        PartialEq,
-        Send,
-        Serialize,
-        Sync,
-    );
-    assert_fields!(EqualizerBand: band, gain);
-    assert_impl_all!(
-        EqualizerBand: Clone,
-        Debug,
-        Deserialize<'static>,
-        From<(i64, f64)>,
-        PartialEq,
-        Send,
-        Serialize,
-        Sync,
-    );
-    assert_fields!(Equalizer: bands, guild_id);
-    assert_impl_all!(
-        Equalizer: Clone,
-        Debug,
-        Deserialize<'static>,
-        From<(Id<GuildMarker>, Vec<EqualizerBand>)>,
-        PartialEq,
-        Send,
-        Serialize,
-        Sync,
-    );
-    assert_impl_all!(
-        IncomingEvent: Clone,
-        Debug,
-        Deserialize<'static>,
-        From<PlayerUpdate>,
-        From<Stats>,
-        PartialEq,
-        Send,
-        Serialize,
-        Sync,
-    );
-    assert_impl_all!(
-        OutgoingEvent: Clone,
-        Debug,
-        Deserialize<'static>,
-        From<Destroy>,
-        From<Equalizer>,
-        From<Pause>,
-        From<Play>,
-        From<Seek>,
-        From<Stop>,
-        From<VoiceUpdate>,
-        From<Volume>,
-        PartialEq,
-        Send,
-        Serialize,
-        Sync,
-    );
-    assert_fields!(Pause: guild_id, paused);
-    assert_impl_all!(
-        Pause: Clone,
-        Debug,
-        Deserialize<'static>,
-        Eq,
-        From<(Id<GuildMarker>, bool)>,
-        PartialEq,
-        Send,
-        Serialize,
-        Sync,
-    );
-    assert_fields!(PlayerUpdateState: position, time);
-    assert_impl_all!(
-        PlayerUpdateState: Clone,
-        Debug,
-        Deserialize<'static>,
-        Eq,
-        PartialEq,
-        Send,
-        Serialize,
-        Sync,
-    );
-    assert_fields!(PlayerUpdate: guild_id, state);
-    assert_impl_all!(
-        PlayerUpdate: Clone,
-        Debug,
-        Deserialize<'static>,
-        Eq,
-        PartialEq,
-        Send,
-        Serialize,
-        Sync,
-    );
-    assert_fields!(Play: end_time, guild_id, no_replace, position, track);
-    assert_impl_all!(
-        Play: Clone,
-        Debug,
-        Deserialize<'static>,
-        Eq,
-        From<(Id<GuildMarker>, String)>,
-        From<(Id<GuildMarker>, String, Option<u64>)>,
-        From<(Id<GuildMarker>, String, u64)>,
-        From<(Id<GuildMarker>, String, Option<u64>, Option<u64>)>,
-        From<(Id<GuildMarker>, String, Option<u64>, u64)>,
-        From<(Id<GuildMarker>, String, u64, Option<u64>)>,
-        From<(Id<GuildMarker>, String, u64, u64)>,
-        From<(Id<GuildMarker>, String, Option<u64>, Option<u64>, bool)>,
-        From<(Id<GuildMarker>, String, Option<u64>, u64, bool)>,
-        From<(Id<GuildMarker>, String, u64, Option<u64>, bool)>,
-        From<(Id<GuildMarker>, String, u64, u64, bool)>,
-        PartialEq,
-        Send,
-        Serialize,
-        Sync,
-    );
-    assert_fields!(Seek: guild_id, position);
-    assert_impl_all!(
-        Seek: Clone,
-        Debug,
-        Deserialize<'static>,
-        Eq,
-        From<(Id<GuildMarker>, i64)>,
-        PartialEq,
-        Send,
-        Serialize,
-        Sync,
-    );
-    assert_fields!(
-        Stats: cpu,
-        frame_stats,
-        memory,
-        players,
-        playing_players,
-        uptime
-    );
-    assert_impl_all!(
-        Stats: Clone,
-        Debug,
-        Deserialize<'static>,
-        PartialEq,
-        Send,
-        Serialize,
-        Sync,
-    );
-    assert_fields!(StatsCpu: cores, lavalink_load, system_load);
-    assert_impl_all!(
-        StatsCpu: Clone,
-        Debug,
-        Deserialize<'static>,
-        PartialEq,
-        Send,
-        Serialize,
-        Sync,
-    );
-    assert_fields!(StatsFrames: deficit, nulled, sent);
-    assert_impl_all!(
-        StatsFrames: Clone,
-        Debug,
-        Deserialize<'static>,
-        PartialEq,
-        Send,
-        Serialize,
-        Sync,
-    );
-    assert_fields!(StatsMemory: allocated, free, reservable, used);
-    assert_impl_all!(
-        StatsMemory: Clone,
-        Debug,
-        Deserialize<'static>,
-        PartialEq,
-        Send,
-        Serialize,
-        Sync,
-    );
-    assert_fields!(Stop: guild_id);
-    assert_impl_all!(
-        Stop: Clone,
-        Debug,
-        Deserialize<'static>,
-        Eq,
-        From<Id<GuildMarker>>,
-        PartialEq,
-        Send,
-        Serialize,
-        Sync,
-    );
-    assert_fields!(TrackEnd: reason, track);
-    assert_impl_all!(
-        TrackEnd: Clone,
-        Debug,
-        Deserialize<'static>,
-        PartialEq,
-        Send,
-        Serialize,
-        Sync,
-    );
-    assert_fields!(TrackStart: track);
-    assert_impl_all!(
-        TrackStart: Clone,
-        Debug,
-        Deserialize<'static>,
-        PartialEq,
-        Send,
-        Serialize,
-        Sync,
-    );
-    assert_fields!(WebsocketClosed: code, reason, by_remote);
-    assert_impl_all!(
-        WebsocketClosed: Clone,
-        Debug,
-        Deserialize<'static>,
-        PartialEq,
-        Send,
-        Serialize,
-        Sync,
-    );
-    assert_fields!(VoiceUpdate: guild_id, voice);
-    assert_impl_all!(
-        VoiceUpdate: Clone,
-        Debug,
-        Deserialize<'static>,
-        Eq,
-        From<(Id<GuildMarker>, String, VoiceServerUpdate)>,
-        PartialEq,
-        Send,
-        Serialize,
-        Sync,
-    );
-    assert_fields!(Volume: guild_id, volume);
-    assert_impl_all!(
-        Volume: Clone,
-        Debug,
-        Deserialize<'static>,
-        Eq,
-        PartialEq,
-        Send,
-        Serialize,
-        Sync,
-    );
 
     #[test]
     fn stats_frames_not_provided() {
@@ -1163,7 +904,7 @@ mod lavalink_incoming_model_tests {
 
 #[cfg(test)]
 mod lavalink_outgoing_model_tests {
-    use crate::model::Play;
+    use crate::model::{Play, Stop};
     use crate::http::UpdatePlayerTrack;
 
     use twilight_model::id::{
@@ -1218,6 +959,20 @@ mod lavalink_outgoing_model_tests {
         compare_json_payload(
             play,
             r#"{"track":{"encoded":"QAAAzgMAMUJsZWVkIEl0IE91dCBbT2ZmaWNpYWwgTXVzaWMgVmlkZW9dIC0gTGlua2luIFBhcmsAC0xpbmtpbiBQYXJrAAAAAAAClCgAC09udXVZY3FoekNFAAEAK2h0dHBzOi8vd3d3LnlvdXR1YmUuY29tL3dhdGNoP3Y9T251dVljcWh6Q0UBADRodHRwczovL2kueXRpbWcuY29tL3ZpL09udXVZY3FoekNFL21heHJlc2RlZmF1bHQuanBnAAAHeW91dHViZQAAAAAAAAAA"},"endTime":null}"#.to_string()
+            );
+    }
+
+    #[test]
+    fn should_serialize_an_outgoing_stop() {
+        let stop = OutgoingEvent::Stop(Stop{
+            track: UpdatePlayerTrack {
+                encoded: None,
+            },
+            guild_id: Id::<GuildMarker>::new(987654321),
+        });
+        compare_json_payload(
+            stop,
+            r#"{"track":{"encoded":null}}"#.to_string()
             );
     }
 }

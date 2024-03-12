@@ -536,14 +536,14 @@ impl Connection {
 
     async fn outgoing(&self, outgoing: OutgoingEvent) -> Result<(), NodeError> {
         let address = self.config.address;
-        let guild_id = match outgoing.clone() {
-            OutgoingEvent::VoiceUpdate(voice_update) => voice_update.guild_id,
-            OutgoingEvent::Play(play) => play.guild_id,
+        let (guild_id, no_replace) = match outgoing.clone() {
+            OutgoingEvent::VoiceUpdate(voice_update) => (voice_update.guild_id, true),
+            OutgoingEvent::Play(play) => (play.guild_id, play.no_replace),
             OutgoingEvent::Destroy(_destroy) => todo!("This is a unique case that has a different endpoint."),
-            OutgoingEvent::Equalizer(equalize) => equalize.guild_id,
+            OutgoingEvent::Equalizer(_equalize) => todo!("Need to implement Equalizer guild_id."),
             OutgoingEvent::Pause(_pause) => todo!("Need to implement Pause guild_id."),
             OutgoingEvent::Seek(_seek) => todo!("Need to implement Seek guild_id."),
-            OutgoingEvent::Stop(_stop) => todo!("Need to implement Stop guild_id."),
+            OutgoingEvent::Stop(stop) => (stop.guild_id, false),
             OutgoingEvent::Volume(_volume) => todo!("Need to implement Volume guild_id."),
         };
         let session = self.lavalink_session_id.lock().await.clone().unwrap_or("NO_SESSION".to_string());
@@ -553,7 +553,7 @@ impl Connection {
             "forwarding event to {}: {outgoing:?}",
             address,
         );
-        let url = format!("http://{address}/v4/sessions/{session}/players/{guild_id}?noReplace=true").parse::<hyper::Uri>().unwrap();
+        let url = format!("http://{address}/v4/sessions/{session}/players/{guild_id}?noReplace={no_replace}").parse::<hyper::Uri>().unwrap();
 
         tracing::debug!(
             "converted payload: {payload:?}"
