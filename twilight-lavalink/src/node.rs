@@ -542,9 +542,9 @@ impl Connection {
             OutgoingEvent::Destroy(_destroy) => todo!("This is a unique case that has a different endpoint."),
             OutgoingEvent::Equalizer(_equalize) => todo!("Need to implement Equalizer guild_id."),
             OutgoingEvent::Pause(pause) => (pause.guild_id, true),
-            OutgoingEvent::Seek(_seek) => todo!("Need to implement Seek guild_id."),
+            OutgoingEvent::Seek(seek) => (seek.guild_id, true),
             OutgoingEvent::Stop(stop) => (stop.guild_id, false),
-            OutgoingEvent::Volume(_volume) => todo!("Need to implement Volume guild_id."),
+            OutgoingEvent::Volume(volume) => (volume.guild_id, true),
         };
         let session = self.lavalink_session_id.lock().await.clone().unwrap_or("NO_SESSION".to_string());
         let payload = serde_json::to_string(&outgoing).unwrap();

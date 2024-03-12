@@ -904,7 +904,7 @@ mod lavalink_incoming_model_tests {
 
 #[cfg(test)]
 mod lavalink_outgoing_model_tests {
-    use crate::model::{Play, Stop, Pause};
+    use crate::model::{Play, Stop, Pause, Volume, Seek};
     use crate::http::UpdatePlayerTrack;
 
     use twilight_model::id::{
@@ -985,6 +985,30 @@ mod lavalink_outgoing_model_tests {
         compare_json_payload(
             pause,
             r#"{"guildId":"987654321","paused":true}"#.to_string()
+            );
+    }
+
+    #[test]
+    fn should_serialize_an_outgoing_seek() {
+        let seek = OutgoingEvent::Seek(Seek{
+            position: 66000,
+            guild_id: Id::<GuildMarker>::new(987654321),
+        });
+        compare_json_payload(
+            seek,
+            r#"{"position":66000}"#.to_string()
+            );
+    }
+
+    #[test]
+    fn should_serialize_an_outgoing_volume() {
+        let volume = OutgoingEvent::Volume(Volume{
+            volume: 50,
+            guild_id: Id::<GuildMarker>::new(987654321),
+        });
+        compare_json_payload(
+            volume,
+            r#"{"volume":50}"#.to_string()
             );
     }
 }
