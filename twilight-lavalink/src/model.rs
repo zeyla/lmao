@@ -448,7 +448,7 @@ pub mod incoming {
         PlayerUpdate(PlayerUpdate),
         /// New statistics about a node and its host.
         Stats(Stats),
-        // /// Dispatched when player or voice events occur.
+        /// Dispatched when player or voice events occur.
         Event(Event),
     }
 
@@ -832,7 +832,7 @@ mod lavalink_incoming_model_tests {
 
 
     // These are incoming so we only need to check that the input json can deserialize into the struct.
-    fn compare_json_payload<T: serde::Serialize + std::fmt::Debug + for<'a> serde::Deserialize<'a> + std::cmp::PartialEq>
+    fn compare_json_payload<T: std::fmt::Debug + for<'a> serde::Deserialize<'a> + std::cmp::PartialEq>
         (data_struct: T, json_payload: String) {
         // Deserialize
         let deserialized: T = serde_json::from_str(&json_payload).unwrap();
@@ -840,7 +840,7 @@ mod lavalink_incoming_model_tests {
     }
 
     #[test]
-    fn should_serialize_a_ready_response() {
+    fn should_deserialize_a_ready_response() {
         let ready = Ready {
             op: Opcode::Ready,
             resumed: false,
@@ -853,7 +853,7 @@ mod lavalink_incoming_model_tests {
     }
 
     #[test]
-    fn should_serialize_a_player_update_response() {
+    fn should_deserialize_a_player_update_response() {
         let update = PlayerUpdate {
             op: Opcode::PlayerUpdate,
             guild_id: Id::<GuildMarker>::new(987654321),
@@ -871,7 +871,7 @@ mod lavalink_incoming_model_tests {
     }
 
     #[test]
-    fn should_serialize_stat_event() {
+    fn should_deserialize_stat_event() {
         let stat_event = Stats {
             op: Opcode::Stats,
             players: 0,
@@ -889,7 +889,7 @@ mod lavalink_incoming_model_tests {
     }
 
     #[test]
-    fn should_serialize_stat_event_with_frame_stat() {
+    fn should_deserialize_stat_event_with_frame_stat() {
         let stat_event = Stats {
             op: Opcode::Stats,
             players: 0,
@@ -907,7 +907,7 @@ mod lavalink_incoming_model_tests {
     }
 
     #[test]
-    fn should_serialize_track_start_event() {
+    fn should_deserialize_track_start_event() {
         let track_start_event = Event {
             op: Opcode::Event,
             r#type: EventType::TrackStartEvent,
