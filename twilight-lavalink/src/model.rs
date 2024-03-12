@@ -118,6 +118,7 @@ pub mod outgoing {
         /// The bands to use as part of the equalizer.
         pub bands: Vec<EqualizerBand>,
         /// The guild ID of the player.
+        #[serde(skip_serializing)]
         pub guild_id: Id<GuildMarker>,
     }
 
