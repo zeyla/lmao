@@ -545,7 +545,7 @@ impl Connection {
             OutgoingEvent::VoiceUpdate(voice_update) => (voice_update.guild_id, true),
             OutgoingEvent::Play(play) => (play.guild_id, play.no_replace),
             OutgoingEvent::Destroy(destroy) => (destroy.guild_id, true),
-            OutgoingEvent::Equalizer(_equalize) => todo!("Need to implement Equalizer guild_id."),
+            OutgoingEvent::Equalizer(equalize) => (equalize.guild_id, true),
             OutgoingEvent::Pause(pause) => (pause.guild_id, true),
             OutgoingEvent::Seek(seek) => (seek.guild_id, true),
             OutgoingEvent::Stop(stop) => (stop.guild_id, false),

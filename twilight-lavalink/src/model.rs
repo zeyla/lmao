@@ -108,6 +108,14 @@ pub mod outgoing {
         }
     }
 
+    /// Filters to pass to the update player endpoint. Currently only Equalizer is supported.
+    #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+    #[non_exhaustive]
+    #[serde(rename_all = "camelCase")]
+    pub enum Filters {
+        /// Adjusts 15 different bands
+        Equalizer(Equalizer),
+    }
 
 
     /// Equalize a player.
@@ -116,7 +124,7 @@ pub mod outgoing {
     #[serde(rename_all = "camelCase")]
     pub struct Equalizer {
         /// The bands to use as part of the equalizer.
-        pub bands: Vec<EqualizerBand>,
+        pub equalizer: Vec<EqualizerBand>,
         /// The guild ID of the player.
         #[serde(skip_serializing)]
         pub guild_id: Id<GuildMarker>,
@@ -132,7 +140,7 @@ pub mod outgoing {
     impl From<(Id<GuildMarker>, Vec<EqualizerBand>)> for Equalizer {
         fn from((guild_id, bands): (Id<GuildMarker>, Vec<EqualizerBand>)) -> Self {
             Self {
-                bands,
+                equalizer: bands,
                 guild_id,
             }
         }
@@ -941,7 +949,7 @@ mod lavalink_incoming_model_tests {
 
 #[cfg(test)]
 mod lavalink_outgoing_model_tests {
-    use crate::model::{Play, Stop, Pause, Volume, Seek, Destroy};
+    use crate::model::{Play, Stop, Pause, Volume, Seek, Destroy, Equalizer};
     use crate::http::UpdatePlayerTrack;
 
     use twilight_model::id::{
@@ -950,8 +958,9 @@ mod lavalink_outgoing_model_tests {
     };
 
     use super::outgoing::{
-            OutgoingEvent, VoiceUpdate, Voice,
+            OutgoingEvent, VoiceUpdate, Voice
         };
+    use super::EqualizerBand;
 
 
     // For some of the outgoing we have fields that don't get deserialized. We only need
@@ -1059,5 +1068,18 @@ mod lavalink_outgoing_model_tests {
             destroy,
             r#"{"guildId":"987654321"}"#.to_string()
             );
+    }
+
+    #[test]
+    fn should_serialize_an_outgoing_equalize() {
+        let equalize = OutgoingEvent::Equalizer(Equalizer {
+            equalizer: vec![EqualizerBand::new(5, -0.15)],
+            guild_id: Id::<GuildMarker>::new(987654321),
+        });
+        compare_json_payload(
+            equalize,
+            r#"{"equalizer":[{"band":5,"gain":-0.15}]}"#.to_string()
+            );
+
     }
 }
