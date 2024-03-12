@@ -1163,13 +1163,16 @@ mod lavalink_incoming_model_tests {
 
 #[cfg(test)]
 mod lavalink_outgoing_model_tests {
+    use crate::model::Play;
+    use crate::http::UpdatePlayerTrack;
+
     use twilight_model::id::{
         Id,
         marker::GuildMarker,
     };
 
     use super::outgoing::{
-            VoiceUpdate, Voice
+            OutgoingEvent, VoiceUpdate, Voice,
         };
 
 
@@ -1196,6 +1199,25 @@ mod lavalink_outgoing_model_tests {
         compare_json_payload(
             voice,
             r#"{"voice":{"token":"863ea8ef2ads8ef2","endpoint":"eu-centra654863.discord.media:443","sessionId":"asdf5w1efa65feaf315e8a8effsa1e5f"}}"#.to_string()
+            );
+    }
+
+    #[test]
+    fn should_serialize_an_outgoing_play() {
+        let play = OutgoingEvent::Play(Play{
+            track: UpdatePlayerTrack {
+                encoded: Some("QAAAzgMAMUJsZWVkIEl0IE91dCBbT2ZmaWNpYWwgTXVzaWMgVmlkZW9dIC0gTGlua2luIFBhcmsAC0xpbmtpbiBQYXJrAAAAAAAClCgAC09udXVZY3FoekNFAAEAK2h0dHBzOi8vd3d3LnlvdXR1YmUuY29tL3dhdGNoP3Y9T251dVljcWh6Q0UBADRodHRwczovL2kueXRpbWcuY29tL3ZpL09udXVZY3FoekNFL21heHJlc2RlZmF1bHQuanBnAAAHeW91dHViZQAAAAAAAAAA".to_string()),
+            },
+            position: None,
+            end_time: Some(None),
+            volume: None,
+            paused: None,
+            guild_id: Id::<GuildMarker>::new(987654321),
+            no_replace: true,
+        });
+        compare_json_payload(
+            play,
+            r#"{"track":{"encoded":"QAAAzgMAMUJsZWVkIEl0IE91dCBbT2ZmaWNpYWwgTXVzaWMgVmlkZW9dIC0gTGlua2luIFBhcmsAC0xpbmtpbiBQYXJrAAAAAAAClCgAC09udXVZY3FoekNFAAEAK2h0dHBzOi8vd3d3LnlvdXR1YmUuY29tL3dhdGNoP3Y9T251dVljcWh6Q0UBADRodHRwczovL2kueXRpbWcuY29tL3ZpL09udXVZY3FoekNFL21heHJlc2RlZmF1bHQuanBnAAAHeW91dHViZQAAAAAAAAAA"},"endTime":null}"#.to_string()
             );
     }
 }
