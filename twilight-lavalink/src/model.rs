@@ -1075,29 +1075,25 @@ mod lavalink_struct_tests {
 }
 
 #[cfg(test)]
-mod lavalink_model_serialization_tests {
+mod lavalink_incoming_model_tests {
+    use crate::model::TrackStart;
     use twilight_model::id::{
         Id,
         marker::GuildMarker,
     };
 
-    use super::{
-        incoming::{
-            Opcode, Ready, PlayerUpdate, PlayerUpdateState
-        },
-    };
+    use crate::http::{Track, TrackInfo};
+
+    use super::incoming::{
+            Event, EventType, EventData, Opcode, PlayerUpdate, PlayerUpdateState, Ready
+        };
 
 
-
+    // These are incoming so we only need to check that the input json can deserialize into the struct.
     fn compare_json_payload<T: serde::Serialize + std::fmt::Debug + for<'a> serde::Deserialize<'a> + std::cmp::PartialEq>
         (data_struct: T, json_payload: String) {
-        // Serialize
-        let serialized = serde_json::to_string(&data_struct).unwrap();
-        let expected_serialized = json_payload;
-        assert_eq!(serialized, expected_serialized);
-
         // Deserialize
-        let deserialized: T = serde_json::from_str(&serialized).unwrap();
+        let deserialized: T = serde_json::from_str(&json_payload).unwrap();
         assert_eq!(deserialized, data_struct);
     }
 
@@ -1129,6 +1125,77 @@ mod lavalink_model_serialization_tests {
         compare_json_payload(
             update,
             r#"{"op":"playerUpdate","guildId":"987654321","state":{"time":1710214147839,"position":534,"connected":true,"ping":0}}"#.to_string()
+            );
+    }
+
+    #[test]
+    fn should_serialize_track_start_event() {
+        let track_start_event = Event {
+            op: Opcode::Event,
+            r#type: EventType::TrackStartEvent,
+            guild_id: Id::<GuildMarker>::new(987654321).to_string(),
+            data: EventData::TrackStartEvent(
+                TrackStart { track: Track {
+                    encoded: "QAAAzgMAMUJsZWVkIEl0IE91dCBbT2ZmaWNpYWwgTXVzaWMgVmlkZW9dIC0gTGlua2luIFBhcmsAC0xpbmtpbiBQYXJrAAAAAAAClCgAC09udXVZY3FoekNFAAEAK2h0dHBzOi8vd3d3LnlvdXR1YmUuY29tL3dhdGNoP3Y9T251dVljcWh6Q0UBADRodHRwczovL2kueXRpbWcuY29tL3ZpL09udXVZY3FoekNFL21heHJlc2RlZmF1bHQuanBnAAAHeW91dHViZQAAAAAAAAAA".to_string(),
+                    info: TrackInfo {
+                        identifier: "OnuuYcqhzCE".to_string(),
+                        is_seekable: true,
+                        author: "Linkin Park".to_string(),
+                        length: 169000,
+                        is_stream: false,
+                        position: 0,
+                        title: "Bleed It Out [Official Music Video] - Linkin Park".to_string(),
+                        uri:Some("https://www.youtube.com/watch?v=OnuuYcqhzCE".to_string()),
+                        source_name:"youtube".to_string(),
+                        artwork_url:Some("https://i.ytimg.com/vi/OnuuYcqhzCE/maxresdefault.jpg".to_string()),
+                        isrc: None
+                    }
+                } })
+
+        };
+        compare_json_payload(
+            track_start_event.clone(),
+            r#"{"op":"event","guildId":"987654321","type":"TrackStartEvent","track":{"encoded":"QAAAzgMAMUJsZWVkIEl0IE91dCBbT2ZmaWNpYWwgTXVzaWMgVmlkZW9dIC0gTGlua2luIFBhcmsAC0xpbmtpbiBQYXJrAAAAAAAClCgAC09udXVZY3FoekNFAAEAK2h0dHBzOi8vd3d3LnlvdXR1YmUuY29tL3dhdGNoP3Y9T251dVljcWh6Q0UBADRodHRwczovL2kueXRpbWcuY29tL3ZpL09udXVZY3FoekNFL21heHJlc2RlZmF1bHQuanBnAAAHeW91dHViZQAAAAAAAAAA","info":{"identifier":"OnuuYcqhzCE","isSeekable":true,"author":"Linkin Park","length":169000,"isStream":false,"position":0,"title":"Bleed It Out [Official Music Video] - Linkin Park","uri":"https://www.youtube.com/watch?v=OnuuYcqhzCE","artworkUrl":"https://i.ytimg.com/vi/OnuuYcqhzCE/maxresdefault.jpg","isrc":null,"sourceName":"youtube"},"pluginInfo":{},"userData":{}}}"#.to_string()
+            );
+    }
+}
+
+
+#[cfg(test)]
+mod lavalink_outgoing_model_tests {
+    use twilight_model::id::{
+        Id,
+        marker::GuildMarker,
+    };
+
+    use super::outgoing::{
+            VoiceUpdate, Voice
+        };
+
+
+    // For some of the outgoing we have fields that don't get deserialized. We only need
+    // to check weather the serialization is working.
+    fn compare_json_payload<T: serde::Serialize + std::fmt::Debug + std::cmp::PartialEq>
+        (data_struct: T, json_payload: String) {
+
+        let serialized = serde_json::to_string(&data_struct).unwrap();
+        let expected_serialized = json_payload;
+        assert_eq!(serialized, expected_serialized);
+    }
+
+    #[test]
+    fn should_serialize_an_outgoing_voice_update() {
+        let voice = VoiceUpdate {
+            guild_id: Id::<GuildMarker>::new(987654321),
+            voice: Voice{
+                token: String::from("863ea8ef2ads8ef2"),
+                endpoint: String::from("eu-centra654863.discord.media:443"),
+                session_id: String::from("asdf5w1efa65feaf315e8a8effsa1e5f"),
+            },
+        };
+        compare_json_payload(
+            voice,
+            r#"{"voice":{"token":"863ea8ef2ads8ef2","endpoint":"eu-centra654863.discord.media:443","sessionId":"asdf5w1efa65feaf315e8a8effsa1e5f"}}"#.to_string()
             );
     }
 }
