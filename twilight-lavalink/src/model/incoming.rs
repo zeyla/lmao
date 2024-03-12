@@ -208,7 +208,7 @@ pub enum EventType {
     /// Dispatched when a track gets stuck while playing.
     TrackStuckEvent,
     /// Dispatched when the websocket connection to Discord voice servers is closed.
-    WebsocketClosedEvent,
+    WebSocketClosedEvent,
 }
 
 /// Server dispatched an event.
@@ -225,7 +225,7 @@ pub enum EventData {
     /// Dispatched when a track gets stuck while playing.
     TrackStuckEvent(TrackStuck),
     /// Dispatched when the websocket connection to Discord voice servers is closed.
-    WebsocketClosedEvent(WebsocketClosed),
+    WebSocketClosedEvent(WebsocketClosed),
 }
 
 

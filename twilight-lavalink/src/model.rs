@@ -108,10 +108,9 @@ mod lavalink_incoming_model_tests {
 
     use crate::http::{Track, TrackInfo};
 
-    use super::incoming::{
-            Event, EventType, EventData, Opcode, PlayerUpdate, PlayerUpdateState, Ready,
-            Stats, StatsCpu, StatsMemory, StatsFrame
-        };
+    use super::{incoming::{
+            Event, EventData, EventType, Opcode, PlayerUpdate, PlayerUpdateState, Ready, Stats, StatsCpu, StatsFrame, StatsMemory
+        }, WebsocketClosed};
 
 
     // These are incoming so we only need to check that the input json can deserialize into the struct.
@@ -196,28 +195,55 @@ mod lavalink_incoming_model_tests {
             r#type: EventType::TrackStartEvent,
             guild_id: Id::<GuildMarker>::new(987654321).to_string(),
             data: EventData::TrackStartEvent(
-                TrackStart { track: Track {
-                    encoded: "QAAAzgMAMUJsZWVkIEl0IE91dCBbT2ZmaWNpYWwgTXVzaWMgVmlkZW9dIC0gTGlua2luIFBhcmsAC0xpbmtpbiBQYXJrAAAAAAAClCgAC09udXVZY3FoekNFAAEAK2h0dHBzOi8vd3d3LnlvdXR1YmUuY29tL3dhdGNoP3Y9T251dVljcWh6Q0UBADRodHRwczovL2kueXRpbWcuY29tL3ZpL09udXVZY3FoekNFL21heHJlc2RlZmF1bHQuanBnAAAHeW91dHViZQAAAAAAAAAA".to_string(),
-                    info: TrackInfo {
-                        identifier: "OnuuYcqhzCE".to_string(),
-                        is_seekable: true,
-                        author: "Linkin Park".to_string(),
-                        length: 169000,
-                        is_stream: false,
-                        position: 0,
-                        title: "Bleed It Out [Official Music Video] - Linkin Park".to_string(),
-                        uri:Some("https://www.youtube.com/watch?v=OnuuYcqhzCE".to_string()),
-                        source_name:"youtube".to_string(),
-                        artwork_url:Some("https://i.ytimg.com/vi/OnuuYcqhzCE/maxresdefault.jpg".to_string()),
-                        isrc: None
+                TrackStart {
+                    track: Track {
+                        encoded: "QAAAzgMAMUJsZWVkIEl0IE91dCBbT2ZmaWNpYWwgTXVzaWMgVmlkZW9dIC0gTGlua2luIFBhcmsAC0xpbmtpbiBQYXJrAAAAAAAClCgAC09udXVZY3FoekNFAAEAK2h0dHBzOi8vd3d3LnlvdXR1YmUuY29tL3dhdGNoP3Y9T251dVljcWh6Q0UBADRodHRwczovL2kueXRpbWcuY29tL3ZpL09udXVZY3FoekNFL21heHJlc2RlZmF1bHQuanBnAAAHeW91dHViZQAAAAAAAAAA".to_string(),
+                        info: TrackInfo {
+                            identifier: "OnuuYcqhzCE".to_string(),
+                            is_seekable: true,
+                            author: "Linkin Park".to_string(),
+                            length: 169000,
+                            is_stream: false,
+                            position: 0,
+                            title: "Bleed It Out [Official Music Video] - Linkin Park".to_string(),
+                            uri:Some("https://www.youtube.com/watch?v=OnuuYcqhzCE".to_string()),
+                            source_name:"youtube".to_string(),
+                            artwork_url:Some("https://i.ytimg.com/vi/OnuuYcqhzCE/maxresdefault.jpg".to_string()),
+                            isrc: None
+                        }
                     }
-                } })
+                }
+            )
 
         };
         compare_json_payload(
             track_start_event.clone(),
             r#"{"op":"event","guildId":"987654321","type":"TrackStartEvent","track":{"encoded":"QAAAzgMAMUJsZWVkIEl0IE91dCBbT2ZmaWNpYWwgTXVzaWMgVmlkZW9dIC0gTGlua2luIFBhcmsAC0xpbmtpbiBQYXJrAAAAAAAClCgAC09udXVZY3FoekNFAAEAK2h0dHBzOi8vd3d3LnlvdXR1YmUuY29tL3dhdGNoP3Y9T251dVljcWh6Q0UBADRodHRwczovL2kueXRpbWcuY29tL3ZpL09udXVZY3FoekNFL21heHJlc2RlZmF1bHQuanBnAAAHeW91dHViZQAAAAAAAAAA","info":{"identifier":"OnuuYcqhzCE","isSeekable":true,"author":"Linkin Park","length":169000,"isStream":false,"position":0,"title":"Bleed It Out [Official Music Video] - Linkin Park","uri":"https://www.youtube.com/watch?v=OnuuYcqhzCE","artworkUrl":"https://i.ytimg.com/vi/OnuuYcqhzCE/maxresdefault.jpg","isrc":null,"sourceName":"youtube"},"pluginInfo":{},"userData":{}}}"#.to_string()
             );
+    }
+
+
+    #[test]
+    fn should_deserialize_websocketclosed_event() {
+        let websocket_closed_event = Event {
+            op: Opcode::Event,
+            r#type: EventType::WebSocketClosedEvent,
+            guild_id: Id::<GuildMarker>::new(987654321).to_string(),
+            data: EventData::WebSocketClosedEvent(
+                WebsocketClosed {
+                    code: 1000,
+                    reason: "".to_string(),
+                    by_remote: false,
+                }
+
+            )
+
+        };
+        compare_json_payload(
+            websocket_closed_event.clone(),
+            r#"{"op":"event","type":"WebSocketClosedEvent","guildId":"987654321","code":1000,"reason":"","byRemote":false}"#.to_string()
+            );
+
     }
 }
 
