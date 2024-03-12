@@ -534,12 +534,17 @@ impl Connection {
         Ok(())
     }
 
-    async fn outgoing(&self, outgoing: OutgoingEvent) -> Result<(), NodeError> {
+    async fn get_outgoing_endpoint_based_on_event(&self, outgoing: &OutgoingEvent) -> (Method, hyper::Uri) {
         let address = self.config.address;
+        tracing::debug!(
+            "forwarding event to {}: {outgoing:?}",
+            address,
+        );
+
         let (guild_id, no_replace) = match outgoing.clone() {
             OutgoingEvent::VoiceUpdate(voice_update) => (voice_update.guild_id, true),
             OutgoingEvent::Play(play) => (play.guild_id, play.no_replace),
-            OutgoingEvent::Destroy(_destroy) => todo!("This is a unique case that has a different endpoint."),
+            OutgoingEvent::Destroy(destroy) => (destroy.guild_id, true),
             OutgoingEvent::Equalizer(_equalize) => todo!("Need to implement Equalizer guild_id."),
             OutgoingEvent::Pause(pause) => (pause.guild_id, true),
             OutgoingEvent::Seek(seek) => (seek.guild_id, true),
@@ -547,29 +552,28 @@ impl Connection {
             OutgoingEvent::Volume(volume) => (volume.guild_id, true),
         };
         let session = self.lavalink_session_id.lock().await.clone().unwrap_or("NO_SESSION".to_string());
-        let payload = serde_json::to_string(&outgoing).unwrap();
 
-        tracing::debug!(
-            "forwarding event to {}: {outgoing:?}",
-            address,
-        );
-        let url = format!("http://{address}/v4/sessions/{session}/players/{guild_id}?noReplace={no_replace}").parse::<hyper::Uri>().unwrap();
+        match outgoing.clone() {
+            OutgoingEvent::Destroy(_) => (Method::DELETE, format!("http://{address}/v4/sessions/{session}/players/{guild_id}").parse::<hyper::Uri>().unwrap()),
+            _ => (Method::PATCH, format!("http://{address}/v4/sessions/{session}/players/{guild_id}?noReplace={no_replace}").parse::<hyper::Uri>().unwrap()),
+        }
+    }
+
+    async fn outgoing(&self, outgoing: OutgoingEvent) -> Result<(), NodeError> {
+        let (method, url) = self.get_outgoing_endpoint_based_on_event(&outgoing).await;
+        let payload = serde_json::to_string(&outgoing).unwrap();
 
         tracing::debug!(
             "converted payload: {payload:?}"
             );
 
-        // Get the host and the port
         let host = url.host().expect("uri has no host");
         let port = url.port_u16().unwrap_or(80);
 
         let address = format!("{}:{}", host, port);
 
-        // Open a TCP connection to the remote host
         let stream = TcpStream::connect(address).await.unwrap();
 
-        // Use an adapter to access something implementing `tokio::io` traits as if they implement
-        // `hyper::rt` IO traits.
         let io = TokioIo::new(stream);
 
         // Create the Hyper client
@@ -586,7 +590,7 @@ impl Connection {
         // Create an HTTP request with an empty body and a HOST header
         let req = Request::builder()
             .uri(url)
-            .method(Method::PATCH)
+            .method(method)
             .header(hyper::header::HOST, authority.as_str())
             .header(AUTHORIZATION, self.config.authorization.as_str())
             .header("Content-Type", "application/json")
@@ -597,7 +601,6 @@ impl Connection {
             "Request: {req:?}"
             );
 
-        // Await the response...
         let res = sender.send_request(req).await.unwrap();
 
         tracing::debug!("Response status: {}", res.status());
