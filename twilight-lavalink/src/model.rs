@@ -733,7 +733,7 @@ pub use self::{
 };
 
 #[cfg(test)]
-mod tests {
+mod lavalink_struct_tests {
     use super::{
         incoming::{
             IncomingEvent, PlayerUpdate, PlayerUpdateState, Stats, StatsCpu, StatsFrames,
@@ -1072,4 +1072,74 @@ mod tests {
             ],
         );
     }
+}
+
+#[cfg(test)]
+mod lavalink_model_serialization_tests {
+    use twilight_model::id::{
+        Id,
+        marker::GuildMarker,
+    };
+
+    use super::{
+        incoming::{
+            Opcode, Ready, PlayerUpdate, PlayerUpdateState
+        },
+    };
+
+    #[test]
+    fn test_ready_serialization_deserialization() {
+        let ready = Ready {
+            op: Opcode::Ready,
+            resumed: false,
+            session_id: "la3kfsdf5eafe848".to_string(),
+        };
+
+        // Serialize
+        let serialized = serde_json::to_string(&ready).unwrap();
+        let expected_serialized =
+            r#"{"op":"ready","resumed":false,"sessionId":"la3kfsdf5eafe848"}"#;
+        assert_eq!(serialized, expected_serialized);
+
+        // Deserialize
+        let deserialized: Ready = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(deserialized, ready);
+    }
+
+    #[test]
+    fn name() {
+        let update = PlayerUpdate {
+            op: Opcode::PlayerUpdate,
+            guild_id: Id::<GuildMarker>::new(987654321),
+            state: PlayerUpdateState{
+                time: 1710214147839,
+                position: 534,
+                connected: true,
+                ping: 0,
+            },
+        };
+
+        // Serialize
+        let serialized = serde_json::to_string(&update).unwrap();
+        let expected_serialized =
+            r#"{"op":"playerUpdate","guildId":"987654321","state":{"time":1710214147839,"position":534,"connected":true,"ping":0}}"#;
+        assert_eq!(serialized, expected_serialized);
+
+        // Deserialize
+        let deserialized: PlayerUpdate = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(deserialized, update);
+    }
+
+    // #[test]
+    // fn test_enum_serialization_deserialization() {
+    //     let input = MyEnum::Variant2(42);
+
+    //     // Serialize
+    //     let serialized = serde_json::to_string(&input).unwrap();
+    //     assert_eq!(serialized, r#""Variant2""#);
+
+    //     // Deserialize
+    //     let deserialized: MyEnum = serde_json::from_str(&serialized).unwrap();
+    //     assert_eq!(deserialized, input);
+    // }
 }
