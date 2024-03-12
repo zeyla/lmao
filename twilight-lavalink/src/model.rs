@@ -543,7 +543,7 @@ pub mod incoming {
         pub cpu: StatsCpu,
         /// Statistics about audio frames.
         #[serde(rename = "frameStats", skip_serializing_if = "Option::is_none")]
-        pub frame_stats: Option<StatsFrames>,
+        pub frame_stats: Option<StatsFrame>,
         /// Memory information about the node's host.
         pub memory: StatsMemory,
         /// The current number of total players (active and not active) within
@@ -572,13 +572,13 @@ pub mod incoming {
     #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
     #[non_exhaustive]
     #[serde(rename_all = "camelCase")]
-    pub struct StatsFrames {
+    pub struct StatsFrame {
         /// The number of CPU cores.
-        pub sent: u64,
+        pub sent: i64,
         /// The load of the Lavalink server.
-        pub nulled: u64,
+        pub nulled: i64,
         /// The load of the system as a whole.
-        pub deficit: u64,
+        pub deficit: i64,
     }
 
     /// Memory information about a node and its host.
@@ -723,7 +723,7 @@ pub mod incoming {
 
 pub use self::{
     incoming::{
-        IncomingEvent, PlayerUpdate, PlayerUpdateState, Stats, StatsCpu, StatsFrames, StatsMemory,
+        IncomingEvent, PlayerUpdate, PlayerUpdateState, Stats, StatsCpu, StatsFrame, StatsMemory,
         TrackEnd, TrackStart, TrackStuck, TrackException, WebsocketClosed,
     },
     outgoing::{
@@ -826,7 +826,8 @@ mod lavalink_incoming_model_tests {
     use crate::http::{Track, TrackInfo};
 
     use super::incoming::{
-            Event, EventType, EventData, Opcode, PlayerUpdate, PlayerUpdateState, Ready
+            Event, EventType, EventData, Opcode, PlayerUpdate, PlayerUpdateState, Ready,
+            Stats, StatsCpu, StatsMemory, StatsFrame
         };
 
 
@@ -866,6 +867,42 @@ mod lavalink_incoming_model_tests {
         compare_json_payload(
             update,
             r#"{"op":"playerUpdate","guildId":"987654321","state":{"time":1710214147839,"position":534,"connected":true,"ping":0}}"#.to_string()
+            );
+    }
+
+    #[test]
+    fn should_serialize_stat_event() {
+        let stat_event = Stats {
+            op: Opcode::Stats,
+            players: 0,
+            playing_players: 0,
+            uptime: 1139738,
+            cpu: StatsCpu { cores: 16, lavalink_load: 3.497090420769919E-5, system_load: 0.05597997834786306 },
+            frame_stats: None,
+            memory: StatsMemory { allocated: 331350016, free: 228139904, reservable: 8396996608, used: 103210112 }
+
+        };
+        compare_json_payload(
+            stat_event.clone(),
+            r#"{"op":"stats","frameStats":null,"players":0,"playingPlayers":0,"uptime":1139738,"memory":{"free":228139904,"used":103210112,"allocated":331350016,"reservable":8396996608},"cpu":{"cores":16,"systemLoad":0.05597997834786306,"lavalinkLoad":3.497090420769919E-5}}"#.to_string()
+            );
+    }
+
+    #[test]
+    fn should_serialize_stat_event_with_frame_stat() {
+        let stat_event = Stats {
+            op: Opcode::Stats,
+            players: 0,
+            playing_players: 0,
+            uptime: 1139738,
+            cpu: StatsCpu { cores: 16, lavalink_load: 3.497090420769919E-5, system_load: 0.05597997834786306 },
+            frame_stats: Some(StatsFrame{ sent: 6000, nulled: 10, deficit: -3010}),
+            memory: StatsMemory { allocated: 331350016, free: 228139904, reservable: 8396996608, used: 103210112 },
+
+        };
+        compare_json_payload(
+            stat_event.clone(),
+            r#"{"op":"stats","frameStats":{"sent":6000,"nulled":10,"deficit":-3010},"players":0,"playingPlayers":0,"uptime":1139738,"memory":{"free":228139904,"used":103210112,"allocated":331350016,"reservable":8396996608},"cpu":{"cores":16,"systemLoad":0.05597997834786306,"lavalinkLoad":3.497090420769919E-5}}"#.to_string()
             );
     }
 
