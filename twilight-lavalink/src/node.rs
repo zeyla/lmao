@@ -541,7 +541,7 @@ impl Connection {
             OutgoingEvent::Play(play) => (play.guild_id, play.no_replace),
             OutgoingEvent::Destroy(_destroy) => todo!("This is a unique case that has a different endpoint."),
             OutgoingEvent::Equalizer(_equalize) => todo!("Need to implement Equalizer guild_id."),
-            OutgoingEvent::Pause(_pause) => todo!("Need to implement Pause guild_id."),
+            OutgoingEvent::Pause(pause) => (pause.guild_id, true),
             OutgoingEvent::Seek(_seek) => todo!("Need to implement Seek guild_id."),
             OutgoingEvent::Stop(stop) => (stop.guild_id, false),
             OutgoingEvent::Volume(_volume) => todo!("Need to implement Volume guild_id."),
