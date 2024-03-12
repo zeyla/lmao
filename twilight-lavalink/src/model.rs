@@ -1087,27 +1087,35 @@ mod lavalink_model_serialization_tests {
         },
     };
 
+
+
+    fn compare_json_payload<T: serde::Serialize + std::fmt::Debug + for<'a> serde::Deserialize<'a> + std::cmp::PartialEq>
+        (data_struct: T, json_payload: String) {
+        // Serialize
+        let serialized = serde_json::to_string(&data_struct).unwrap();
+        let expected_serialized = json_payload;
+        assert_eq!(serialized, expected_serialized);
+
+        // Deserialize
+        let deserialized: T = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(deserialized, data_struct);
+    }
+
     #[test]
-    fn test_ready_serialization_deserialization() {
+    fn should_serialize_a_ready_response() {
         let ready = Ready {
             op: Opcode::Ready,
             resumed: false,
             session_id: "la3kfsdf5eafe848".to_string(),
         };
-
-        // Serialize
-        let serialized = serde_json::to_string(&ready).unwrap();
-        let expected_serialized =
-            r#"{"op":"ready","resumed":false,"sessionId":"la3kfsdf5eafe848"}"#;
-        assert_eq!(serialized, expected_serialized);
-
-        // Deserialize
-        let deserialized: Ready = serde_json::from_str(&serialized).unwrap();
-        assert_eq!(deserialized, ready);
+        compare_json_payload(
+            ready,
+            r#"{"op":"ready","resumed":false,"sessionId":"la3kfsdf5eafe848"}"#.to_string()
+            );
     }
 
     #[test]
-    fn name() {
+    fn should_serialize_a_player_update_response() {
         let update = PlayerUpdate {
             op: Opcode::PlayerUpdate,
             guild_id: Id::<GuildMarker>::new(987654321),
@@ -1118,28 +1126,9 @@ mod lavalink_model_serialization_tests {
                 ping: 0,
             },
         };
-
-        // Serialize
-        let serialized = serde_json::to_string(&update).unwrap();
-        let expected_serialized =
-            r#"{"op":"playerUpdate","guildId":"987654321","state":{"time":1710214147839,"position":534,"connected":true,"ping":0}}"#;
-        assert_eq!(serialized, expected_serialized);
-
-        // Deserialize
-        let deserialized: PlayerUpdate = serde_json::from_str(&serialized).unwrap();
-        assert_eq!(deserialized, update);
+        compare_json_payload(
+            update,
+            r#"{"op":"playerUpdate","guildId":"987654321","state":{"time":1710214147839,"position":534,"connected":true,"ping":0}}"#.to_string()
+            );
     }
-
-    // #[test]
-    // fn test_enum_serialization_deserialization() {
-    //     let input = MyEnum::Variant2(42);
-
-    //     // Serialize
-    //     let serialized = serde_json::to_string(&input).unwrap();
-    //     assert_eq!(serialized, r#""Variant2""#);
-
-    //     // Deserialize
-    //     let deserialized: MyEnum = serde_json::from_str(&serialized).unwrap();
-    //     assert_eq!(deserialized, input);
-    // }
 }
