@@ -1,6 +1,7 @@
 //! Models to deserialize responses into and functions to create `http` crate
 //! requests.
 
+use crate::model::incoming::{Exception, Track};
 use http::{
     header::{HeaderValue, AUTHORIZATION},
     Error as HttpError, Request,
@@ -8,57 +9,6 @@ use http::{
 use percent_encoding::NON_ALPHANUMERIC;
 use serde::{Deserialize, Deserializer, Serialize};
 use std::net::{IpAddr, SocketAddr};
-
-/// Information about the track returned or playing on lavalink.
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[non_exhaustive]
-#[serde(rename_all = "camelCase")]
-pub struct TrackInfo {
-    /// The track identifier.
-    pub identifier: String,
-    /// Whether the track is seekable.
-    pub is_seekable: bool,
-    /// The track author.
-    pub author: String,
-    /// The track length in milliseconds.
-    pub length: u64,
-    /// Whether the track is a stream.
-    pub is_stream: bool,
-    /// The track position in milliseconds.
-    pub position: u64,
-    /// The track title.
-    pub title: String,
-    /// The track uri.
-    pub uri: Option<String>,
-    /// The track artwork url.
-    pub artwork_url: Option<String>,
-    /// The track [ISRC](https://en.wikipedia.org/wiki/International_Standard_Recording_Code).
-    pub isrc: Option<String>,
-    /// The track source name.
-    pub source_name: String,
-}
-
-/// A track object for lavalink to consume and read.
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[non_exhaustive]
-#[serde(rename_all = "camelCase")]
-pub struct Track {
-    /// The base64 encoded track to play
-    pub encoded: String,
-    /// Info about the track
-    pub info: TrackInfo,
-}
-
-/// The track on the player. The encoded and identifier are mutually exclusive. Using only encoded for now.
-/// Encoded was chosen since that was previously used in the v3 implementation.
-/// We don't support userData field currently.
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[non_exhaustive]
-#[serde(rename_all = "camelCase")]
-pub struct UpdatePlayerTrack {
-    /// The base64 encoded track to play. null stops the current track
-    pub encoded: Option<String>,
-}
 
 /// Information about a playlist from a search result.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -81,32 +31,6 @@ where
         .ok()
         .flatten()
         .and_then(|selected| u64::try_from(selected).ok()))
-}
-
-/// The levels of severity that an exception can have.
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[non_exhaustive]
-#[serde(rename_all = "camelCase")]
-pub enum Severity {
-    /// The cause is known and expected, indicates that there is nothing wrong with the library itself.
-    Common,
-    /// The cause might not be exactly known, but is possibly caused by outside factors. For example when an outside service responds in a format that we do not expect.
-    Suspicious,
-    /// The probable cause is an issue with the library or there is no way to tell what the cause might be. This is the default level and other levels are used in cases where the thrower has more in-depth knowledge about the error.
-    Fault,
-}
-
-/// The exception with the details attached on what happened when making a query to lavalink.
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[non_exhaustive]
-#[serde(rename_all = "camelCase")]
-pub struct Exception {
-    /// The message of the exception.
-    pub message: Option<String>,
-    /// The severity of the exception.
-    pub severity: Severity,
-    /// The cause of the exception.
-    pub cause: String,
 }
 
 /// The type of search result given.
@@ -411,8 +335,9 @@ mod tests {
     use super::{
         FailingAddress, IpBlock, IpBlockType, LoadedTracks, NanoIpDetails, NanoIpRoutePlanner,
         PlaylistInfo, RotatingIpDetails, RotatingIpRoutePlanner, RotatingNanoIpDetails,
-        RotatingNanoIpRoutePlanner, RoutePlanner, RoutePlannerType, Track, TrackInfo,
+        RotatingNanoIpRoutePlanner, RoutePlanner, RoutePlannerType, Track,
     };
+    use crate::model::incoming::TrackInfo;
     use serde::{Deserialize, Serialize};
     use serde_test::Token;
     use static_assertions::{assert_fields, assert_impl_all};

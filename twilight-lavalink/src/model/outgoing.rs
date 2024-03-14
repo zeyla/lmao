@@ -5,7 +5,16 @@ use twilight_model::{
     id::{marker::GuildMarker, Id},
 };
 
-use crate::http::UpdatePlayerTrack;
+/// The track on the player. The encoded and identifier are mutually exclusive. Using only encoded for now.
+/// Encoded was chosen since that was previously used in the v3 implementation.
+/// We don't support userData field currently.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[non_exhaustive]
+#[serde(rename_all = "camelCase")]
+pub struct UpdatePlayerTrack {
+    /// The base64 encoded track to play. null stops the current track
+    pub encoded: Option<String>,
+}
 
 /// An outgoing event to send to Lavalink.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]

@@ -15,9 +15,34 @@ pub enum Opcode {
     Event,
 }
 
-use crate::http::{Exception, Track};
 use serde::{Deserialize, Serialize};
 use twilight_model::id::{marker::GuildMarker, Id};
+
+/// The levels of severity that an exception can have.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[non_exhaustive]
+#[serde(rename_all = "camelCase")]
+pub enum Severity {
+    /// The cause is known and expected, indicates that there is nothing wrong with the library itself.
+    Common,
+    /// The cause might not be exactly known, but is possibly caused by outside factors. For example when an outside service responds in a format that we do not expect.
+    Suspicious,
+    /// The probable cause is an issue with the library or there is no way to tell what the cause might be. This is the default level and other levels are used in cases where the thrower has more in-depth knowledge about the error.
+    Fault,
+}
+
+/// The exception with the details attached on what happened when making a query to lavalink.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[non_exhaustive]
+#[serde(rename_all = "camelCase")]
+pub struct Exception {
+    /// The message of the exception.
+    pub message: Option<String>,
+    /// The severity of the exception.
+    pub severity: Severity,
+    /// The cause of the exception.
+    pub cause: String,
+}
 
 /// An incoming event from a Lavalink node.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -174,6 +199,46 @@ pub struct StatsMemory {
     pub reservable: u64,
     /// The number of bytes used.
     pub used: u64,
+}
+
+/// Information about the track returned or playing on lavalink.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[non_exhaustive]
+#[serde(rename_all = "camelCase")]
+pub struct TrackInfo {
+    /// The track identifier.
+    pub identifier: String,
+    /// Whether the track is seekable.
+    pub is_seekable: bool,
+    /// The track author.
+    pub author: String,
+    /// The track length in milliseconds.
+    pub length: u64,
+    /// Whether the track is a stream.
+    pub is_stream: bool,
+    /// The track position in milliseconds.
+    pub position: u64,
+    /// The track title.
+    pub title: String,
+    /// The track uri.
+    pub uri: Option<String>,
+    /// The track artwork url.
+    pub artwork_url: Option<String>,
+    /// The track [ISRC](https://en.wikipedia.org/wiki/International_Standard_Recording_Code).
+    pub isrc: Option<String>,
+    /// The track source name.
+    pub source_name: String,
+}
+
+/// A track object for lavalink to consume and read.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[non_exhaustive]
+#[serde(rename_all = "camelCase")]
+pub struct Track {
+    /// The base64 encoded track to play
+    pub encoded: String,
+    /// Info about the track
+    pub info: TrackInfo,
 }
 
 /// Server dispatched an event. See the Event Types section for more information.

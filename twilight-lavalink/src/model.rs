@@ -6,12 +6,12 @@ pub mod outgoing;
 
 pub use self::{
     incoming::{
-        IncomingEvent, PlayerUpdate, PlayerUpdateState, Stats, StatsCpu, StatsFrame, StatsMemory,
-        TrackEnd, TrackException, TrackStart, TrackStuck, WebSocketClosed,
+        Exception, IncomingEvent, PlayerUpdate, PlayerUpdateState, Stats, StatsCpu, StatsFrame,
+        StatsMemory, Track, TrackEnd, TrackException, TrackStart, TrackStuck, WebSocketClosed,
     },
     outgoing::{
-        Destroy, Equalizer, EqualizerBand, OutgoingEvent, Pause, Play, Seek, Stop, VoiceUpdate,
-        Volume,
+        Destroy, Equalizer, EqualizerBand, OutgoingEvent, Pause, Play, Seek, Stop,
+        UpdatePlayerTrack, VoiceUpdate, Volume,
     },
 };
 
@@ -103,12 +103,10 @@ mod lavalink_incoming_model_tests {
     use crate::model::{TrackEnd, TrackException, TrackStart, TrackStuck};
     use twilight_model::id::{marker::GuildMarker, Id};
 
-    use crate::http::{Exception, Severity, Track, TrackInfo};
-
     use super::{
         incoming::{
-            Event, EventData, EventType, Opcode, PlayerUpdate, PlayerUpdateState, Ready, Stats,
-            StatsCpu, StatsFrame, StatsMemory, TrackEndReason,
+            Event, EventData, EventType, Exception, Opcode, PlayerUpdate, PlayerUpdateState, Ready,
+            Severity, Stats, StatsCpu, StatsFrame, StatsMemory, Track, TrackEndReason, TrackInfo,
         },
         WebSocketClosed,
     };
@@ -378,12 +376,11 @@ mod lavalink_incoming_model_tests {
 
 #[cfg(test)]
 mod lavalink_outgoing_model_tests {
-    use crate::http::UpdatePlayerTrack;
     use crate::model::{Destroy, Equalizer, Pause, Play, Seek, Stop, Volume};
 
     use twilight_model::id::{marker::GuildMarker, Id};
 
-    use super::outgoing::{OutgoingEvent, Voice, VoiceUpdate};
+    use super::outgoing::{OutgoingEvent, UpdatePlayerTrack, Voice, VoiceUpdate};
     use super::EqualizerBand;
 
     // For some of the outgoing we have fields that don't get deserialized. We only need
