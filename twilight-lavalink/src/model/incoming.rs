@@ -216,16 +216,16 @@ pub enum EventType {
 #[non_exhaustive]
 #[serde(untagged)]
 pub enum EventData {
-    /// Dispatched when a track starts playing.
-    TrackStartEvent(TrackStart),
     /// Dispatched when a track ends.
     TrackEndEvent(TrackEnd),
     /// Dispatched when a track throws an exception.
     TrackExceptionEvent(TrackException),
     /// Dispatched when a track gets stuck while playing.
     TrackStuckEvent(TrackStuck),
+    /// Dispatched when a track starts playing.
+    TrackStartEvent(TrackStart),
     /// Dispatched when the websocket connection to Discord voice servers is closed.
-    WebSocketClosedEvent(WebsocketClosed),
+    WebSocketClosedEvent(WebSocketClosed),
 }
 
 
@@ -294,7 +294,7 @@ pub struct TrackStuck {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
-pub struct WebsocketClosed {
+pub struct WebSocketClosed {
     /// [Discord websocket opcode](https://discord.com/developers/docs/topics/opcodes-and-status-codes#voice-voice-close-event-codes) that closed the connection.
     pub code: u64,
     /// Reason the connection was closed.

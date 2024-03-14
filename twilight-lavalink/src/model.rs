@@ -7,7 +7,7 @@ pub mod incoming;
 pub use self::{
     incoming::{
         IncomingEvent, PlayerUpdate, PlayerUpdateState, Stats, StatsCpu, StatsFrame, StatsMemory,
-        TrackEnd, TrackStart, TrackStuck, TrackException, WebsocketClosed,
+        TrackEnd, TrackStart, TrackStuck, TrackException, WebSocketClosed,
     },
     outgoing::{
         Destroy, Equalizer, EqualizerBand, OutgoingEvent, Pause, Play, Seek, Stop, VoiceUpdate,
@@ -100,17 +100,17 @@ mod lavalink_struct_tests {
 
 #[cfg(test)]
 mod lavalink_incoming_model_tests {
-    use crate::model::TrackStart;
+    use crate::model::{TrackException, TrackStart, TrackStuck, TrackEnd};
     use twilight_model::id::{
         Id,
         marker::GuildMarker,
     };
 
-    use crate::http::{Track, TrackInfo};
+    use crate::http::{Track, TrackInfo, Exception, Severity};
 
     use super::{incoming::{
-            Event, EventData, EventType, Opcode, PlayerUpdate, PlayerUpdateState, Ready, Stats, StatsCpu, StatsFrame, StatsMemory
-        }, WebsocketClosed};
+            Event, EventData, EventType, Opcode, PlayerUpdate, PlayerUpdateState, Ready, Stats, StatsCpu, StatsFrame, StatsMemory, TrackEndReason
+        }, WebSocketClosed};
 
 
     // These are incoming so we only need to check that the input json can deserialize into the struct.
@@ -222,6 +222,117 @@ mod lavalink_incoming_model_tests {
             );
     }
 
+    #[test]
+    fn should_deserialize_track_exception_event() {
+        let track_exception_event = Event {
+            op: Opcode::Event,
+            r#type: EventType::TrackExceptionEvent,
+            guild_id: Id::<GuildMarker>::new(987654321).to_string(),
+            data: EventData::TrackExceptionEvent(
+                TrackException {
+                    track: Track {
+                        encoded: "QAAAjQIAJVJpY2sgQXN0bGV5IC0gTmV2ZXIgR29ubmEgR2l2ZSBZb3UgVXAADlJpY2tBc3RsZXlWRVZPAAAAAAADPCAAC2RRdzR3OVdnWGNRAAEAK2h0dHBzOi8vd3d3LnlvdXR1YmUuY29tL3dhdGNoP3Y9ZFF3NHc5V2dYY1EAB3lvdXR1YmUAAAAAAAAAAA==".to_string(),
+                        info: TrackInfo {
+                            identifier: "dQw4w9WgXcQ".to_string(),
+                            is_seekable: true,
+                            author: "RickAstleyVEVO".to_string(),
+                            length: 212000,
+                            is_stream: false,
+                            position: 0,
+                            title: "Rick Astley - Never Gonna Give You Up".to_string(),
+                            uri:Some("https://www.youtube.com/watch?v=dQw4w9WgXcQ".to_string()),
+                            source_name:"youtube".to_string(),
+                            artwork_url:Some("https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg".to_string()),
+                            isrc: None
+                        }
+                    },
+                    exception: Exception {
+                        message: Some("".to_string()),
+                        severity: Severity::Common,
+                        cause: "No video found.".to_string(),
+                    }
+
+                }
+            )
+
+        };
+        compare_json_payload(
+            track_exception_event.clone(),
+            r#"{"op":"event","type":"TrackExceptionEvent","guildId":"987654321","track":{"encoded":"QAAAjQIAJVJpY2sgQXN0bGV5IC0gTmV2ZXIgR29ubmEgR2l2ZSBZb3UgVXAADlJpY2tBc3RsZXlWRVZPAAAAAAADPCAAC2RRdzR3OVdnWGNRAAEAK2h0dHBzOi8vd3d3LnlvdXR1YmUuY29tL3dhdGNoP3Y9ZFF3NHc5V2dYY1EAB3lvdXR1YmUAAAAAAAAAAA==","info":{"identifier":"dQw4w9WgXcQ","isSeekable":true,"author":"RickAstleyVEVO","length":212000,"isStream":false,"position":0,"title":"Rick Astley - Never Gonna Give You Up","uri":"https://www.youtube.com/watch?v=dQw4w9WgXcQ","artworkUrl":"https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg","isrc":null,"sourceName":"youtube"},"pluginInfo":{}},"exception":{"message":"","severity":"common","cause":"No video found."}}"#.to_string()
+            );
+    }
+
+    #[test]
+    fn should_deserialize_track_stuck_event() {
+        let track_stuck_event = Event {
+            op: Opcode::Event,
+            r#type: EventType::TrackStuckEvent,
+            guild_id: Id::<GuildMarker>::new(987654321).to_string(),
+            data: EventData::TrackStuckEvent(
+                TrackStuck {
+                    track: Track {
+                        encoded: "QAAAjQIAJVJpY2sgQXN0bGV5IC0gTmV2ZXIgR29ubmEgR2l2ZSBZb3UgVXAADlJpY2tBc3RsZXlWRVZPAAAAAAADPCAAC2RRdzR3OVdnWGNRAAEAK2h0dHBzOi8vd3d3LnlvdXR1YmUuY29tL3dhdGNoP3Y9ZFF3NHc5V2dYY1EAB3lvdXR1YmUAAAAAAAAAAA==".to_string(),
+                        info: TrackInfo {
+                            identifier: "dQw4w9WgXcQ".to_string(),
+                            is_seekable: true,
+                            author: "RickAstleyVEVO".to_string(),
+                            length: 212000,
+                            is_stream: false,
+                            position: 0,
+                            title: "Rick Astley - Never Gonna Give You Up".to_string(),
+                            uri:Some("https://www.youtube.com/watch?v=dQw4w9WgXcQ".to_string()),
+                            source_name:"youtube".to_string(),
+                            artwork_url:Some("https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg".to_string()),
+                            isrc: None
+                        }
+                    },
+                    threshold_ms: 123456789,
+
+                }
+            )
+
+        };
+        compare_json_payload(
+            track_stuck_event.clone(),
+            r#"{"op":"event","type":"TrackStuckEvent","guildId":"987654321","track":{"encoded":"QAAAjQIAJVJpY2sgQXN0bGV5IC0gTmV2ZXIgR29ubmEgR2l2ZSBZb3UgVXAADlJpY2tBc3RsZXlWRVZPAAAAAAADPCAAC2RRdzR3OVdnWGNRAAEAK2h0dHBzOi8vd3d3LnlvdXR1YmUuY29tL3dhdGNoP3Y9ZFF3NHc5V2dYY1EAB3lvdXR1YmUAAAAAAAAAAA==","info":{"identifier":"dQw4w9WgXcQ","isSeekable":true,"author":"RickAstleyVEVO","length":212000,"isStream":false,"position":0,"title":"Rick Astley - Never Gonna Give You Up","uri":"https://www.youtube.com/watch?v=dQw4w9WgXcQ","artworkUrl":"https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg","isrc":null,"sourceName":"youtube"},"pluginInfo":{}},"thresholdMs":123456789}"#.to_string()
+            );
+    }
+
+    #[test]
+    fn should_deserialize_track_end_event() {
+        let track_stuck_event = Event {
+            op: Opcode::Event,
+            r#type: EventType::TrackEndEvent,
+            guild_id: Id::<GuildMarker>::new(987654321).to_string(),
+            data: EventData::TrackEndEvent(
+                TrackEnd {
+                    track: Track {
+                        encoded: "QAAAjQIAJVJpY2sgQXN0bGV5IC0gTmV2ZXIgR29ubmEgR2l2ZSBZb3UgVXAADlJpY2tBc3RsZXlWRVZPAAAAAAADPCAAC2RRdzR3OVdnWGNRAAEAK2h0dHBzOi8vd3d3LnlvdXR1YmUuY29tL3dhdGNoP3Y9ZFF3NHc5V2dYY1EAB3lvdXR1YmUAAAAAAAAAAA==".to_string(),
+                        info: TrackInfo {
+                            identifier: "dQw4w9WgXcQ".to_string(),
+                            is_seekable: true,
+                            author: "RickAstleyVEVO".to_string(),
+                            length: 212000,
+                            is_stream: false,
+                            position: 0,
+                            title: "Rick Astley - Never Gonna Give You Up".to_string(),
+                            uri:Some("https://www.youtube.com/watch?v=dQw4w9WgXcQ".to_string()),
+                            source_name:"youtube".to_string(),
+                            artwork_url:Some("https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg".to_string()),
+                            isrc: None
+                        }
+                    },
+                    reason: TrackEndReason::Finished,
+                }
+            )
+
+        };
+        compare_json_payload(
+            track_stuck_event.clone(),
+            r#"{"op":"event","type":"TrackEndEvent","guildId":"987654321","track":{"encoded":"QAAAjQIAJVJpY2sgQXN0bGV5IC0gTmV2ZXIgR29ubmEgR2l2ZSBZb3UgVXAADlJpY2tBc3RsZXlWRVZPAAAAAAADPCAAC2RRdzR3OVdnWGNRAAEAK2h0dHBzOi8vd3d3LnlvdXR1YmUuY29tL3dhdGNoP3Y9ZFF3NHc5V2dYY1EAB3lvdXR1YmUAAAAAAAAAAA==","info":{"identifier":"dQw4w9WgXcQ","isSeekable":true,"author":"RickAstleyVEVO","length":212000,"isStream":false,"position":0,"title":"Rick Astley - Never Gonna Give You Up","uri":"https://www.youtube.com/watch?v=dQw4w9WgXcQ","artworkUrl":"https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg","isrc":null,"sourceName":"youtube"},"pluginInfo":{}},"reason":"finished"}"#.to_string()
+            );
+    }
+
 
     #[test]
     fn should_deserialize_websocketclosed_event() {
@@ -230,7 +341,7 @@ mod lavalink_incoming_model_tests {
             r#type: EventType::WebSocketClosedEvent,
             guild_id: Id::<GuildMarker>::new(987654321).to_string(),
             data: EventData::WebSocketClosedEvent(
-                WebsocketClosed {
+                WebSocketClosed {
                     code: 1000,
                     reason: "".to_string(),
                     by_remote: false,
