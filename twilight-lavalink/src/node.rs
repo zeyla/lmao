@@ -573,7 +573,7 @@ impl Connection {
         let host = url.host().expect("uri has no host");
         let port = url.port_u16().unwrap_or(80);
 
-        let address = format!("{}:{}", host, port);
+        let address = format!("{host}:{port}");
 
         let stream = TcpStream::connect(address).await.unwrap();
 
@@ -583,7 +583,7 @@ impl Connection {
         let (mut sender, conn) = hyper::client::conn::http1::handshake(io).await.unwrap();
         tokio::task::spawn(async move {
             if let Err(err) = conn.await {
-                println!("Connection failed: {:?}", err);
+                println!("Connection failed: {err:?}");
             }
         });
 
@@ -591,7 +591,7 @@ impl Connection {
         let authority = url.authority().unwrap().clone();
 
         // Create an HTTP request with an empty body and a HOST header
-        let req = Request::builder()
+        let request = Request::builder()
             .uri(url)
             .method(method)
             .header(hyper::header::HOST, authority.as_str())
@@ -600,11 +600,11 @@ impl Connection {
             .body(payload)
             .unwrap();
 
-        tracing::debug!("Request: {req:?}");
+        tracing::debug!("Request: {request:?}");
 
-        let res = sender.send_request(req).await.unwrap();
+        let response = sender.send_request(request).await.unwrap();
 
-        tracing::debug!("Response status: {}", res.status());
+        tracing::debug!("Response status: {}", response.status());
         Ok(())
     }
 
@@ -635,7 +635,7 @@ impl Connection {
         match &event {
             IncomingEvent::PlayerUpdate(update) => self.player_update(update)?,
             IncomingEvent::Ready(ready) => {
-                *self.lavalink_session_id.lock().await = Some(ready.session_id.clone())
+                *self.lavalink_session_id.lock().await = Some(ready.session_id.clone());
             }
             IncomingEvent::Stats(stats) => self.stats(stats).await?,
             &IncomingEvent::Event(_) => {}
@@ -684,7 +684,7 @@ impl Drop for Connection {
 
 fn connect_request(state: &NodeConfig) -> Result<ClientBuilder, NodeError> {
     let crate_version = env!("CARGO_PKG_VERSION");
-    let client_name = format!("twilight-lavalink/{}", crate_version);
+    let client_name = format!("twilight-lavalink/{crate_version}");
 
     let mut builder = ClientBuilder::new()
         .uri(&format!("ws://{}/v4/websocket", state.address))
