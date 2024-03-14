@@ -1,6 +1,7 @@
 //! Models to (de)serialize incoming/outgoing websocket events and HTTP
 //! responses.
 
+
 pub mod incoming;
 pub mod outgoing;
 

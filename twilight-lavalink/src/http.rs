@@ -619,7 +619,6 @@ mod tests {
                     len: 13,
                 },
                 Token::Str("name"),
-                Token::Some,
                 Token::Str("Test Playlist"),
                 Token::Str("selectedTrack"),
                 Token::I64(-1),
