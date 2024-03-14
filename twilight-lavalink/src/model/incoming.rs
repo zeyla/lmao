@@ -15,8 +15,7 @@ pub enum Opcode {
     Event,
 }
 
-
-use crate::http::{Track, Exception};
+use crate::http::{Exception, Track};
 use serde::{Deserialize, Serialize};
 use twilight_model::id::{marker::GuildMarker, Id};
 
@@ -40,7 +39,6 @@ impl From<Ready> for IncomingEvent {
         Self::Ready(event)
     }
 }
-
 
 impl From<Event> for IncomingEvent {
     fn from(event: Event) -> IncomingEvent {
@@ -84,7 +82,6 @@ pub struct PlayerUpdate {
     pub guild_id: Id<GuildMarker>,
     /// The new state of the player.
     pub state: PlayerUpdateState,
-
 }
 
 /// New statistics about a node and its host.
@@ -228,7 +225,6 @@ pub enum EventData {
     WebSocketClosedEvent(WebSocketClosed),
 }
 
-
 /// The reason for the track ending.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[non_exhaustive]
@@ -245,7 +241,6 @@ pub enum TrackEndReason {
     /// The track was cleaned up.
     Cleanup,
 }
-
 
 /// A track ended event from lavalink.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -288,7 +283,6 @@ pub struct TrackStuck {
     /// The threshold in milliseconds that was exceeded.
     pub threshold_ms: u64,
 }
-
 
 /// The voice websocket connection to Discord has been closed.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]

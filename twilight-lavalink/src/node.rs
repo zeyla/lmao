@@ -17,7 +17,7 @@
 //!
 //! [`Lavalink`]: crate::client::Lavalink
 
-use hyper::{Request, Method};
+use hyper::{Method, Request};
 use hyper_util::rt::TokioIo;
 
 use crate::{
@@ -450,13 +450,13 @@ impl Node {
         let cpu = 1.05f64.powf(100f64 * stats.cpu.system_load) * 10f64 - 10f64;
 
         let (deficit_frame, null_frame) = (
-            1.03f64
-                .powf(500f64 * (stats.frame_stats.as_ref().map_or(0, |f| f.deficit) as f64 / 3000f64))
-                * 300f64
+            1.03f64.powf(
+                500f64 * (stats.frame_stats.as_ref().map_or(0, |f| f.deficit) as f64 / 3000f64),
+            ) * 300f64
                 - 300f64,
-            (1.03f64
-                .powf(500f64 * (stats.frame_stats.as_ref().map_or(0, |f| f.nulled) as f64 / 3000f64))
-                * 300f64
+            (1.03f64.powf(
+                500f64 * (stats.frame_stats.as_ref().map_or(0, |f| f.nulled) as f64 / 3000f64),
+            ) * 300f64
                 - 300f64)
                 * 2f64,
         );
@@ -534,12 +534,12 @@ impl Connection {
         Ok(())
     }
 
-    async fn get_outgoing_endpoint_based_on_event(&self, outgoing: &OutgoingEvent) -> (Method, hyper::Uri) {
+    async fn get_outgoing_endpoint_based_on_event(
+        &self,
+        outgoing: &OutgoingEvent,
+    ) -> (Method, hyper::Uri) {
         let address = self.config.address;
-        tracing::debug!(
-            "forwarding event to {}: {outgoing:?}",
-            address,
-        );
+        tracing::debug!("forwarding event to {}: {outgoing:?}", address,);
 
         let (guild_id, no_replace) = match outgoing.clone() {
             OutgoingEvent::VoiceUpdate(voice_update) => (voice_update.guild_id, true),
@@ -551,7 +551,12 @@ impl Connection {
             OutgoingEvent::Stop(stop) => (stop.guild_id, false),
             OutgoingEvent::Volume(volume) => (volume.guild_id, true),
         };
-        let session = self.lavalink_session_id.lock().await.clone().unwrap_or("NO_SESSION".to_string());
+        let session = self
+            .lavalink_session_id
+            .lock()
+            .await
+            .clone()
+            .unwrap_or("NO_SESSION".to_string());
 
         match outgoing.clone() {
             OutgoingEvent::Destroy(_) => (Method::DELETE, format!("http://{address}/v4/sessions/{session}/players/{guild_id}").parse::<hyper::Uri>().unwrap()),
@@ -563,9 +568,7 @@ impl Connection {
         let (method, url) = self.get_outgoing_endpoint_based_on_event(&outgoing).await;
         let payload = serde_json::to_string(&outgoing).unwrap();
 
-        tracing::debug!(
-            "converted payload: {payload:?}"
-            );
+        tracing::debug!("converted payload: {payload:?}");
 
         let host = url.host().expect("uri has no host");
         let port = url.port_u16().unwrap_or(80);
@@ -597,9 +600,7 @@ impl Connection {
             .body(payload)
             .unwrap();
 
-        tracing::debug!(
-            "Request: {req:?}"
-            );
+        tracing::debug!("Request: {req:?}");
 
         let res = sender.send_request(req).await.unwrap();
 
@@ -633,9 +634,11 @@ impl Connection {
 
         match &event {
             IncomingEvent::PlayerUpdate(update) => self.player_update(update)?,
-            IncomingEvent::Ready(ready) => *self.lavalink_session_id.lock().await = Some(ready.session_id.clone()),
+            IncomingEvent::Ready(ready) => {
+                *self.lavalink_session_id.lock().await = Some(ready.session_id.clone())
+            }
             IncomingEvent::Stats(stats) => self.stats(stats).await?,
-            &IncomingEvent::Event(_) => {},
+            &IncomingEvent::Event(_) => {}
         }
 
         // It's fine if the rx end dropped, often users don't need to care about

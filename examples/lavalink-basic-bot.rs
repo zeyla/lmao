@@ -1,4 +1,3 @@
-use twilight_lavalink::{http::LoadResultData::{Playlist, Search, Track}, model::{Equalizer, EqualizerBand}};
 use http_body_util::{BodyExt, Full};
 use hyper::{body::Bytes, Request};
 use hyper_util::{
@@ -10,6 +9,10 @@ use twilight_gateway::{
     Event, EventTypeFlags, Intents, MessageSender, Shard, ShardId, StreamExt as _,
 };
 use twilight_http::Client as HttpClient;
+use twilight_lavalink::{
+    http::LoadResultData::{Playlist, Search, Track},
+    model::{Equalizer, EqualizerBand},
+};
 use twilight_lavalink::{
     http::LoadedTracks,
     model::{Destroy, Pause, Play, Seek, Stop, Volume},
@@ -197,7 +200,7 @@ async fn play(msg: Message, state: State) -> anyhow::Result<()> {
     let loaded = serde_json::from_slice::<LoadedTracks>(&response_bytes)?;
 
     match loaded.data {
-        Track (track) => {
+        Track(track) => {
             player.send(Play::from((guild_id, &track.encoded)))?;
 
             let content = format!(
@@ -209,9 +212,13 @@ async fn play(msg: Message, state: State) -> anyhow::Result<()> {
                 .create_message(msg.channel_id)
                 .content(&content)
                 .await?;
-        },
-        Playlist(_) => {todo!("Write example for playlist result.")},
-        Search(_) => {todo!("Write example for search result.")},
+        }
+        Playlist(_) => {
+            todo!("Write example for playlist result.")
+        }
+        Search(_) => {
+            todo!("Write example for search result.")
+        }
         _ => {
             state
                 .http
@@ -318,7 +325,10 @@ async fn equalize(msg: Message, state: State) -> anyhow::Result<()> {
     let gain = gain_msg.content.parse::<f64>()?;
 
     let player = state.lavalink.player(guild_id).await.unwrap();
-    player.send(Equalizer::from((guild_id, vec![EqualizerBand::new(band, gain)])))?;
+    player.send(Equalizer::from((
+        guild_id,
+        vec![EqualizerBand::new(band, gain)],
+    )))?;
 
     state
         .http

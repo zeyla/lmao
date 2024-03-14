@@ -90,17 +90,13 @@ pub struct Destroy {
 impl Destroy {
     /// Create a new destroy event.
     pub const fn new(guild_id: Id<GuildMarker>) -> Self {
-        Self {
-            guild_id,
-        }
+        Self { guild_id }
     }
 }
 
 impl From<Id<GuildMarker>> for Destroy {
     fn from(guild_id: Id<GuildMarker>) -> Self {
-        Self {
-            guild_id,
-        }
+        Self { guild_id }
     }
 }
 
@@ -112,7 +108,6 @@ pub enum Filters {
     /// Adjusts 15 different bands
     Equalizer(Equalizer),
 }
-
 
 /// Equalize a player.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -197,7 +192,6 @@ impl From<(Id<GuildMarker>, bool)> for Pause {
     }
 }
 
-
 // TODO: Might need to fix this struct to abstract the guild_id to another struct pending on what the server sends back with it included.
 /// Play a track, optionally specifying to not skip the current track.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -255,8 +249,8 @@ impl<T: Into<String>, S: Into<Option<u64>>> From<(Id<GuildMarker>, T, S)> for Pl
     }
 }
 
-impl<T: Into<String>, S: Into<Option<u64>>, E: Into<Option<u64>>>
-    From<(Id<GuildMarker>, T, S, E)> for Play
+impl<T: Into<String>, S: Into<Option<u64>>, E: Into<Option<u64>>> From<(Id<GuildMarker>, T, S, E)>
+    for Play
 {
     fn from((guild_id, track, start_time, end_time): (Id<GuildMarker>, T, S, E)) -> Self {
         Self::from((guild_id, track, start_time, end_time, true))
@@ -276,7 +270,7 @@ impl<T: Into<String>, S: Into<Option<u64>>, E: Into<Option<u64>>>
             end_time: Some(end_time.into()),
             volume: None,
             paused: None,
-            track: UpdatePlayerTrack{
+            track: UpdatePlayerTrack {
                 encoded: Some(track.into()),
             },
         }
@@ -304,10 +298,7 @@ impl Seek {
 
 impl From<(Id<GuildMarker>, i64)> for Seek {
     fn from((guild_id, position): (Id<GuildMarker>, i64)) -> Self {
-        Self {
-            guild_id,
-            position,
-        }
+        Self { guild_id, position }
     }
 }
 
@@ -334,9 +325,7 @@ impl From<Id<GuildMarker>> for Stop {
     fn from(guild_id: Id<GuildMarker>) -> Self {
         Self {
             guild_id,
-            track: UpdatePlayerTrack {
-                encoded: None,
-            },
+            track: UpdatePlayerTrack { encoded: None },
         }
     }
 }
@@ -379,12 +368,12 @@ impl VoiceUpdate {
 impl<T: Into<String>> From<(Id<GuildMarker>, T, VoiceServerUpdate)> for VoiceUpdate {
     fn from((guild_id, session_id, event): (Id<GuildMarker>, T, VoiceServerUpdate)) -> Self {
         Self {
-            guild_id: guild_id,
-            voice: Voice{
+            guild_id,
+            voice: Voice {
                 token: event.token,
                 endpoint: event.endpoint.unwrap_or("NO_ENDPOINT_RETURNED".to_string()),
                 session_id: session_id.into(),
-            }
+            },
         }
     }
 }
@@ -410,9 +399,6 @@ impl Volume {
 
 impl From<(Id<GuildMarker>, i64)> for Volume {
     fn from((guild_id, volume): (Id<GuildMarker>, i64)) -> Self {
-        Self {
-            guild_id,
-            volume,
-        }
+        Self { guild_id, volume }
     }
 }

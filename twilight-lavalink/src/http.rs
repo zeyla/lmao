@@ -38,8 +38,6 @@ pub struct TrackInfo {
     pub source_name: String,
 }
 
-
-
 /// A track object for lavalink to consume and read.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[non_exhaustive]
@@ -48,8 +46,7 @@ pub struct Track {
     /// The base64 encoded track to play
     pub encoded: String,
     /// Info about the track
-    pub info: TrackInfo
-
+    pub info: TrackInfo,
 }
 
 /// The track on the player. The encoded and identifier are mutually exclusive. Using only encoded for now.
@@ -61,9 +58,7 @@ pub struct Track {
 pub struct UpdatePlayerTrack {
     /// The base64 encoded track to play. null stops the current track
     pub encoded: Option<String>,
-
 }
-
 
 /// Information about a playlist from a search result.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -101,7 +96,6 @@ pub enum Severity {
     Fault,
 }
 
-
 /// The exception with the details attached on what happened when making a query to lavalink.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[non_exhaustive]
@@ -132,7 +126,6 @@ pub enum LoadResultName {
     Error,
 }
 
-
 /// The type of search result given.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[non_exhaustive]
@@ -148,7 +141,6 @@ pub enum LoadResultData {
     Empty(),
     /// The exception that was thrown when searching.
     Error(Exception),
-
 }
 
 /// The playlist with the provided tracks. Currently plugin info isn't supported
@@ -417,10 +409,9 @@ pub fn unmark_failed_address(
 #[cfg(test)]
 mod tests {
     use super::{
-        FailingAddress, IpBlock, IpBlockType, LoadedTracks, NanoIpDetails,
-        NanoIpRoutePlanner, PlaylistInfo, RotatingIpDetails, RotatingIpRoutePlanner,
-        RotatingNanoIpDetails, RotatingNanoIpRoutePlanner, RoutePlanner, RoutePlannerType, Track,
-        TrackInfo,
+        FailingAddress, IpBlock, IpBlockType, LoadedTracks, NanoIpDetails, NanoIpRoutePlanner,
+        PlaylistInfo, RotatingIpDetails, RotatingIpRoutePlanner, RotatingNanoIpDetails,
+        RotatingNanoIpRoutePlanner, RoutePlanner, RoutePlannerType, Track, TrackInfo,
     };
     use serde::{Deserialize, Serialize};
     use serde_test::Token;

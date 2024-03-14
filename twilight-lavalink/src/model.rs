@@ -1,13 +1,13 @@
 //! Models to (de)serialize incoming/outgoing websocket events and HTTP
 //! responses.
 
-pub mod outgoing;
 pub mod incoming;
+pub mod outgoing;
 
 pub use self::{
     incoming::{
         IncomingEvent, PlayerUpdate, PlayerUpdateState, Stats, StatsCpu, StatsFrame, StatsMemory,
-        TrackEnd, TrackStart, TrackStuck, TrackException, WebSocketClosed,
+        TrackEnd, TrackException, TrackStart, TrackStuck, WebSocketClosed,
     },
     outgoing::{
         Destroy, Equalizer, EqualizerBand, OutgoingEvent, Pause, Play, Seek, Stop, VoiceUpdate,
@@ -17,7 +17,7 @@ pub use self::{
 
 #[cfg(test)]
 mod lavalink_struct_tests {
-    use super::incoming::{ Stats, StatsCpu, StatsMemory, };
+    use super::incoming::{Stats, StatsCpu, StatsMemory};
     use serde_test::Token;
 
     #[test]
@@ -100,22 +100,26 @@ mod lavalink_struct_tests {
 
 #[cfg(test)]
 mod lavalink_incoming_model_tests {
-    use crate::model::{TrackException, TrackStart, TrackStuck, TrackEnd};
-    use twilight_model::id::{
-        Id,
-        marker::GuildMarker,
+    use crate::model::{TrackEnd, TrackException, TrackStart, TrackStuck};
+    use twilight_model::id::{marker::GuildMarker, Id};
+
+    use crate::http::{Exception, Severity, Track, TrackInfo};
+
+    use super::{
+        incoming::{
+            Event, EventData, EventType, Opcode, PlayerUpdate, PlayerUpdateState, Ready, Stats,
+            StatsCpu, StatsFrame, StatsMemory, TrackEndReason,
+        },
+        WebSocketClosed,
     };
 
-    use crate::http::{Track, TrackInfo, Exception, Severity};
-
-    use super::{incoming::{
-            Event, EventData, EventType, Opcode, PlayerUpdate, PlayerUpdateState, Ready, Stats, StatsCpu, StatsFrame, StatsMemory, TrackEndReason
-        }, WebSocketClosed};
-
-
     // These are incoming so we only need to check that the input json can deserialize into the struct.
-    fn compare_json_payload<T: std::fmt::Debug + for<'a> serde::Deserialize<'a> + std::cmp::PartialEq>
-        (data_struct: T, json_payload: String) {
+    fn compare_json_payload<
+        T: std::fmt::Debug + for<'a> serde::Deserialize<'a> + std::cmp::PartialEq,
+    >(
+        data_struct: T,
+        json_payload: String,
+    ) {
         // Deserialize
         let deserialized: T = serde_json::from_str(&json_payload).unwrap();
         assert_eq!(deserialized, data_struct);
@@ -130,8 +134,8 @@ mod lavalink_incoming_model_tests {
         };
         compare_json_payload(
             ready,
-            r#"{"op":"ready","resumed":false,"sessionId":"la3kfsdf5eafe848"}"#.to_string()
-            );
+            r#"{"op":"ready","resumed":false,"sessionId":"la3kfsdf5eafe848"}"#.to_string(),
+        );
     }
 
     #[test]
@@ -139,7 +143,7 @@ mod lavalink_incoming_model_tests {
         let update = PlayerUpdate {
             op: Opcode::PlayerUpdate,
             guild_id: Id::<GuildMarker>::new(987654321),
-            state: PlayerUpdateState{
+            state: PlayerUpdateState {
                 time: 1710214147839,
                 position: 534,
                 connected: true,
@@ -159,10 +163,18 @@ mod lavalink_incoming_model_tests {
             players: 0,
             playing_players: 0,
             uptime: 1139738,
-            cpu: StatsCpu { cores: 16, lavalink_load: 3.497090420769919E-5, system_load: 0.05597997834786306 },
+            cpu: StatsCpu {
+                cores: 16,
+                lavalink_load: 3.497090420769919E-5,
+                system_load: 0.05597997834786306,
+            },
             frame_stats: None,
-            memory: StatsMemory { allocated: 331350016, free: 228139904, reservable: 8396996608, used: 103210112 }
-
+            memory: StatsMemory {
+                allocated: 331350016,
+                free: 228139904,
+                reservable: 8396996608,
+                used: 103210112,
+            },
         };
         compare_json_payload(
             stat_event.clone(),
@@ -177,10 +189,22 @@ mod lavalink_incoming_model_tests {
             players: 0,
             playing_players: 0,
             uptime: 1139738,
-            cpu: StatsCpu { cores: 16, lavalink_load: 3.497090420769919E-5, system_load: 0.05597997834786306 },
-            frame_stats: Some(StatsFrame{ sent: 6000, nulled: 10, deficit: -3010}),
-            memory: StatsMemory { allocated: 331350016, free: 228139904, reservable: 8396996608, used: 103210112 },
-
+            cpu: StatsCpu {
+                cores: 16,
+                lavalink_load: 3.497090420769919E-5,
+                system_load: 0.05597997834786306,
+            },
+            frame_stats: Some(StatsFrame {
+                sent: 6000,
+                nulled: 10,
+                deficit: -3010,
+            }),
+            memory: StatsMemory {
+                allocated: 331350016,
+                free: 228139904,
+                reservable: 8396996608,
+                used: 103210112,
+            },
         };
         compare_json_payload(
             stat_event.clone(),
@@ -333,53 +357,41 @@ mod lavalink_incoming_model_tests {
             );
     }
 
-
     #[test]
     fn should_deserialize_websocketclosed_event() {
         let websocket_closed_event = Event {
             op: Opcode::Event,
             r#type: EventType::WebSocketClosedEvent,
             guild_id: Id::<GuildMarker>::new(987654321).to_string(),
-            data: EventData::WebSocketClosedEvent(
-                WebSocketClosed {
-                    code: 1000,
-                    reason: "".to_string(),
-                    by_remote: false,
-                }
-
-            )
-
+            data: EventData::WebSocketClosedEvent(WebSocketClosed {
+                code: 1000,
+                reason: "".to_string(),
+                by_remote: false,
+            }),
         };
         compare_json_payload(
             websocket_closed_event.clone(),
             r#"{"op":"event","type":"WebSocketClosedEvent","guildId":"987654321","code":1000,"reason":"","byRemote":false}"#.to_string()
             );
-
     }
 }
 
-
 #[cfg(test)]
 mod lavalink_outgoing_model_tests {
-    use crate::model::{Play, Stop, Pause, Volume, Seek, Destroy, Equalizer};
     use crate::http::UpdatePlayerTrack;
+    use crate::model::{Destroy, Equalizer, Pause, Play, Seek, Stop, Volume};
 
-    use twilight_model::id::{
-        Id,
-        marker::GuildMarker,
-    };
+    use twilight_model::id::{marker::GuildMarker, Id};
 
-    use super::outgoing::{
-            OutgoingEvent, VoiceUpdate, Voice
-        };
+    use super::outgoing::{OutgoingEvent, Voice, VoiceUpdate};
     use super::EqualizerBand;
-
 
     // For some of the outgoing we have fields that don't get deserialized. We only need
     // to check weather the serialization is working.
-    fn compare_json_payload<T: serde::Serialize + std::fmt::Debug + std::cmp::PartialEq>
-        (data_struct: T, json_payload: String) {
-
+    fn compare_json_payload<T: serde::Serialize + std::fmt::Debug + std::cmp::PartialEq>(
+        data_struct: T,
+        json_payload: String,
+    ) {
         let serialized = serde_json::to_string(&data_struct).unwrap();
         let expected_serialized = json_payload;
         assert_eq!(serialized, expected_serialized);
@@ -389,7 +401,7 @@ mod lavalink_outgoing_model_tests {
     fn should_serialize_an_outgoing_voice_update() {
         let voice = VoiceUpdate {
             guild_id: Id::<GuildMarker>::new(987654321),
-            voice: Voice{
+            voice: Voice {
                 token: String::from("863ea8ef2ads8ef2"),
                 endpoint: String::from("eu-centra654863.discord.media:443"),
                 session_id: String::from("asdf5w1efa65feaf315e8a8effsa1e5f"),
@@ -422,64 +434,49 @@ mod lavalink_outgoing_model_tests {
 
     #[test]
     fn should_serialize_an_outgoing_stop() {
-        let stop = OutgoingEvent::Stop(Stop{
-            track: UpdatePlayerTrack {
-                encoded: None,
-            },
+        let stop = OutgoingEvent::Stop(Stop {
+            track: UpdatePlayerTrack { encoded: None },
             guild_id: Id::<GuildMarker>::new(987654321),
         });
-        compare_json_payload(
-            stop,
-            r#"{"track":{"encoded":null}}"#.to_string()
-            );
+        compare_json_payload(stop, r#"{"track":{"encoded":null}}"#.to_string());
     }
 
     #[test]
     fn should_serialize_an_outgoing_pause() {
-        let pause = OutgoingEvent::Pause(Pause{
+        let pause = OutgoingEvent::Pause(Pause {
             paused: true,
             guild_id: Id::<GuildMarker>::new(987654321),
         });
         compare_json_payload(
             pause,
-            r#"{"guildId":"987654321","paused":true}"#.to_string()
-            );
+            r#"{"guildId":"987654321","paused":true}"#.to_string(),
+        );
     }
 
     #[test]
     fn should_serialize_an_outgoing_seek() {
-        let seek = OutgoingEvent::Seek(Seek{
+        let seek = OutgoingEvent::Seek(Seek {
             position: 66000,
             guild_id: Id::<GuildMarker>::new(987654321),
         });
-        compare_json_payload(
-            seek,
-            r#"{"position":66000}"#.to_string()
-            );
+        compare_json_payload(seek, r#"{"position":66000}"#.to_string());
     }
 
     #[test]
     fn should_serialize_an_outgoing_volume() {
-        let volume = OutgoingEvent::Volume(Volume{
+        let volume = OutgoingEvent::Volume(Volume {
             volume: 50,
             guild_id: Id::<GuildMarker>::new(987654321),
         });
-        compare_json_payload(
-            volume,
-            r#"{"volume":50}"#.to_string()
-            );
+        compare_json_payload(volume, r#"{"volume":50}"#.to_string());
     }
-
 
     #[test]
     fn should_serialize_an_outgoing_destroy_aka_leave() {
-        let destroy = OutgoingEvent::Destroy(Destroy{
+        let destroy = OutgoingEvent::Destroy(Destroy {
             guild_id: Id::<GuildMarker>::new(987654321),
         });
-        compare_json_payload(
-            destroy,
-            r#"{"guildId":"987654321"}"#.to_string()
-            );
+        compare_json_payload(destroy, r#"{"guildId":"987654321"}"#.to_string());
     }
 
     #[test]
@@ -490,8 +487,7 @@ mod lavalink_outgoing_model_tests {
         });
         compare_json_payload(
             equalize,
-            r#"{"equalizer":[{"band":5,"gain":-0.15}]}"#.to_string()
-            );
-
+            r#"{"equalizer":[{"band":5,"gain":-0.15}]}"#.to_string(),
+        );
     }
 }
