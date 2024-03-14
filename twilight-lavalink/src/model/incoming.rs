@@ -69,7 +69,7 @@ pub struct VoiceState {
     pub token: String,
     /// The Discord voice endpoint to connect to.
     pub endpoint: String,
-    /// The Discord voice session id to authenticate with. Note this is seperate from the lavalink session id.
+    /// The Discord voice session id to authenticate with. Note this is separate from the lavalink session id.
     pub session_id: String,
 }
 
@@ -186,7 +186,7 @@ pub struct StatsMemory {
 pub struct Event {
     /// Op code for this websocket event.
     pub op: Opcode,
-    /// The guild id that this was recieved from.
+    /// The guild id that this was received from.
     pub guild_id: String,
     /// The type of event.
     pub r#type: EventType,

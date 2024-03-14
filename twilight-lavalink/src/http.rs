@@ -52,7 +52,7 @@ pub struct Track {
 
 }
 
-/// The track on the player. The encoded and identifier are mutually exclusive. Using only enocded for now.
+/// The track on the player. The encoded and identifier are mutually exclusive. Using only encoded for now.
 /// Encoded was chosen since that was previously used in the v3 implementation.
 /// We don't support userData field currently.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -102,7 +102,7 @@ pub enum Severity {
 }
 
 
-/// The excpetion with the details attached on what happened when making a query to lavalink.
+/// The exception with the details attached on what happened when making a query to lavalink.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]

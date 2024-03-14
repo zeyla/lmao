@@ -349,7 +349,7 @@ pub struct Voice {
     pub token: String,
     /// The Discord voice endpoint to connect to.
     pub endpoint: String,
-    /// The Discord voice session id to authenticate with. This is seperate from the session id of lavalink.
+    /// The Discord voice session id to authenticate with. This is separate from the session id of lavalink.
     pub session_id: String,
 }
 
