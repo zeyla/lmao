@@ -554,6 +554,8 @@ impl Connection {
             .take();
 
         if let Some(session) = session_id {
+            tracing::debug!("Found session id {}. Generating the url and method for event type.", session);
+
             match outgoing.clone() {
                 OutgoingEvent::Destroy(_) => {
                     let destroy_uri = Uri::builder()
@@ -577,6 +579,7 @@ impl Connection {
                 }
             }
         } else {
+            tracing::error!("No session id is found. Session id should have been provided from the websocket connection already.");
             return Err(NodeError {
                 kind: NodeErrorType::OutgoingEventHasNoSession,
                 source: None,
@@ -588,6 +591,7 @@ impl Connection {
         let (method, url) = self.get_outgoing_endpoint_based_on_event(&outgoing).await?;
         let payload = serde_json::to_string(&outgoing).unwrap();
 
+        tracing::debug!("Sending request to {url:?} using method {method:?}.");
         tracing::debug!("converted payload: {payload:?}");
 
         let host = url.host().expect("uri has no host");
@@ -595,11 +599,13 @@ impl Connection {
 
         let address = format!("{host}:{port}");
 
-        let stream = TcpStream::connect(address).await.unwrap();
+        let stream = TcpStream::connect(address).await.map_err(|source| NodeError {
+            kind: NodeErrorType::BuildingConnectionRequest,
+            source: Some(Box::new(source)),
+        })?;
 
         let io = TokioIo::new(stream);
 
-        // Create the Hyper client
         let (mut sender, conn) = hyper::client::conn::http1::handshake(io).await.unwrap();
         tokio::task::spawn(async move {
             if let Err(err) = conn.await {
@@ -607,10 +613,8 @@ impl Connection {
             }
         });
 
-        // The authority of our URL will be the hostname of the httpbin remote
-        let authority = url.authority().unwrap().clone();
+        let authority = url.authority().expect("Authority comes from endpoint. We should have a valid authority and is just used in the header.").clone();
 
-        // Create an HTTP request with an empty body and a HOST header
         let request = Request::builder()
             .uri(url)
             .method(method)
@@ -618,7 +622,10 @@ impl Connection {
             .header(AUTHORIZATION, self.config.authorization.as_str())
             .header("Content-Type", "application/json")
             .body(payload)
-            .unwrap();
+            .map_err(|source| NodeError {
+            kind: NodeErrorType::BuildingConnectionRequest,
+            source: Some(Box::new(source)),
+        })?;
 
         tracing::debug!("Request: {request:?}");
 
@@ -712,20 +719,29 @@ fn connect_request(state: &NodeConfig) -> Result<ClientBuilder, NodeError> {
             kind: NodeErrorType::BuildingConnectionRequest,
             source: Some(Box::new(source)),
         })?
-        .add_header(AUTHORIZATION, state.authorization.parse().unwrap())
+        .add_header(AUTHORIZATION, state.authorization.parse().map_err(|source| NodeError {
+            kind: NodeErrorType::BuildingConnectionRequest,
+            source: Some(Box::new(source)),
+        })?)
         .add_header(
             HeaderName::from_static("user-id"),
             state.user_id.get().into(),
         )
         .add_header(
             HeaderName::from_static("client-name"),
-            HeaderValue::from_str(&client_name).unwrap(),
+            HeaderValue::from_str(&client_name).map_err(|source| NodeError {
+            kind: NodeErrorType::BuildingConnectionRequest,
+            source: Some(Box::new(source)),
+        })?,
         );
 
     if state.resume.is_some() {
         builder = builder.add_header(
             HeaderName::from_static("resume-key"),
-            state.address.to_string().parse().unwrap(),
+            state.address.to_string().parse().map_err(|source| NodeError {
+            kind: NodeErrorType::BuildingConnectionRequest,
+            source: Some(Box::new(source)),
+        })?,
         );
     }
 
@@ -751,9 +767,15 @@ async fn reconnect(
                     "key": config.address,
                     "timeout": resume.timeout,
                 });
-                let msg = Message::text(serde_json::to_string(&payload).unwrap());
+                let msg = Message::text(serde_json::to_string(&payload).map_err(|source| NodeError {
+            kind: NodeErrorType::BuildingConnectionRequest,
+            source: Some(Box::new(source)),
+        })?);
 
-                stream.send(msg).await.unwrap();
+                stream.send(msg).await.map_err(|source| NodeError {
+            kind: NodeErrorType::BuildingConnectionRequest,
+            source: Some(Box::new(source)),
+        })?;
             } else {
                 tracing::debug!("session to {} resumed", config.address);
             }

@@ -102,7 +102,7 @@ impl OutgoingEvent {
         };
     }
 
-    /// Helper function to get wether or not to replace the current track in the lavalink api based on the event type.
+    /// Helper function to get whether or not to replace the current track in the lavalink api based on the event type.
     pub const fn no_replace(event: &OutgoingEvent) -> bool {
         return match event {
             OutgoingEvent::VoiceUpdate(_) => true,
