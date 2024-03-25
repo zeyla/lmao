@@ -541,16 +541,9 @@ impl Connection {
         let address = self.config.address;
         tracing::debug!("forwarding event to {}: {outgoing:?}", address,);
 
-        let (guild_id, no_replace) = match outgoing.clone() {
-            OutgoingEvent::VoiceUpdate(voice_update) => (voice_update.guild_id, true),
-            OutgoingEvent::Play(play) => (play.guild_id, play.no_replace),
-            OutgoingEvent::Destroy(destroy) => (destroy.guild_id, true),
-            OutgoingEvent::Equalizer(equalize) => (equalize.guild_id, true),
-            OutgoingEvent::Pause(pause) => (pause.guild_id, true),
-            OutgoingEvent::Seek(seek) => (seek.guild_id, true),
-            OutgoingEvent::Stop(stop) => (stop.guild_id, false),
-            OutgoingEvent::Volume(volume) => (volume.guild_id, true),
-        };
+        let guild_id = OutgoingEvent::guild_id(outgoing);
+        let no_replace = OutgoingEvent::no_replace(outgoing);
+
         let session = self
             .lavalink_session_id
             .lock()

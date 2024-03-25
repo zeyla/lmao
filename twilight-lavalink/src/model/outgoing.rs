@@ -87,6 +87,34 @@ impl From<Volume> for OutgoingEvent {
     }
 }
 
+impl OutgoingEvent {
+    pub const fn guild_id(event: &OutgoingEvent) -> Id<GuildMarker> {
+        return match event {
+            OutgoingEvent::VoiceUpdate(voice_update) => voice_update.guild_id,
+            OutgoingEvent::Play(play) => play.guild_id,
+            OutgoingEvent::Destroy(destroy) => destroy.guild_id,
+            OutgoingEvent::Equalizer(equalize) => equalize.guild_id,
+            OutgoingEvent::Pause(pause) => pause.guild_id,
+            OutgoingEvent::Seek(seek) => seek.guild_id,
+            OutgoingEvent::Stop(stop) => stop.guild_id,
+            OutgoingEvent::Volume(volume) => volume.guild_id,
+        };
+    }
+
+    pub const fn no_replace(event: &OutgoingEvent) -> bool {
+        return match event {
+            OutgoingEvent::VoiceUpdate(_) => true,
+            OutgoingEvent::Play(play) => play.no_replace,
+            OutgoingEvent::Destroy(_) => true,
+            OutgoingEvent::Equalizer(_) => true,
+            OutgoingEvent::Pause(_) => true,
+            OutgoingEvent::Seek(_) => true,
+            OutgoingEvent::Stop(_) => false,
+            OutgoingEvent::Volume(_) => true,
+        };
+    }
+}
+
 /// Destroy a player from a node.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[non_exhaustive]
