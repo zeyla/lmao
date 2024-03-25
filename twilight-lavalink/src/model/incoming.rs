@@ -5,14 +5,14 @@
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub enum Opcode {
-    /// Lavalink is connected and ready.
-    Ready,
-    /// An update about a player's current track.
-    PlayerUpdate,
-    /// Updated statistics about a node.
-    Stats,
     /// Meta information about a track starting or ending.
     Event,
+    /// An update about a player's current track.
+    PlayerUpdate,
+    /// Lavalink is connected and ready.
+    Ready,
+    /// Updated statistics about a node.
+    Stats,
 }
 
 use serde::{Deserialize, Serialize};
@@ -25,10 +25,10 @@ use twilight_model::id::{marker::GuildMarker, Id};
 pub enum Severity {
     /// The cause is known and expected, indicates that there is nothing wrong with the library itself.
     Common,
-    /// The cause might not be exactly known, but is possibly caused by outside factors. For example when an outside service responds in a format that we do not expect.
-    Suspicious,
     /// The probable cause is an issue with the library or there is no way to tell what the cause might be. This is the default level and other levels are used in cases where the thrower has more in-depth knowledge about the error.
     Fault,
+    /// The cause might not be exactly known, but is possibly caused by outside factors. For example when an outside service responds in a format that we do not expect.
+    Suspicious,
 }
 
 /// The exception with the details attached on what happened when making a query to lavalink.
@@ -36,12 +36,12 @@ pub enum Severity {
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub struct Exception {
+    /// The cause of the exception.
+    pub cause: String,
     /// The message of the exception.
     pub message: Option<String>,
     /// The severity of the exception.
     pub severity: Severity,
-    /// The cause of the exception.
-    pub cause: String,
 }
 
 /// An incoming event from a Lavalink node.
@@ -49,14 +49,14 @@ pub struct Exception {
 #[non_exhaustive]
 #[serde(untagged)]
 pub enum IncomingEvent {
-    /// Dispatched when you successfully connect to the Lavalink node.
-    Ready(Ready),
-    /// An update about the information of a player.
-    PlayerUpdate(PlayerUpdate),
-    /// New statistics about a node and its host.
-    Stats(Stats),
     /// Dispatched when player or voice events occur.
     Event(Event),
+    /// Dispatched when you successfully connect to the Lavalink node.
+    Ready(Ready),
+    /// New statistics about a node and its host.
+    Stats(Stats),
+    /// An update about the information of a player.
+    PlayerUpdate(PlayerUpdate),
 }
 
 impl From<Ready> for IncomingEvent {
@@ -88,12 +88,12 @@ impl From<Stats> for IncomingEvent {
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub struct VoiceState {
-    /// The Discord voice token to authenticate with.
-    pub token: String,
     /// The Discord voice endpoint to connect to.
     pub endpoint: String,
     /// The Discord voice session id to authenticate with. Note this is separate from the lavalink session id.
     pub session_id: String,
+    /// The Discord voice token to authenticate with.
+    pub token: String,
 }
 
 /// An update about the information of a player. Filters are currently unsupported
@@ -101,10 +101,10 @@ pub struct VoiceState {
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub struct PlayerUpdate {
-    /// Op code for this websocket event.
-    pub op: Opcode,
     /// The guild ID of the player.
     pub guild_id: Id<GuildMarker>,
+    /// Op code for this websocket event.
+    pub op: Opcode,
     /// The new state of the player.
     pub state: PlayerUpdateState,
 }
@@ -114,14 +114,14 @@ pub struct PlayerUpdate {
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub struct PlayerUpdateState {
-    /// Unix timestamp of the player in milliseconds.
-    pub time: i64,
-    /// Track position in milliseconds. None if not playing anything.
-    pub position: i64,
     /// True when the player is connected to the voice gateway.
     pub connected: bool,
     /// The ping of the node to the Discord voice server in milliseconds (-1 if not connected).
     pub ping: i64,
+    /// Track position in milliseconds. None if not playing anything.
+    pub position: i64,
+    /// Unix timestamp of the player in milliseconds.
+    pub time: i64,
 }
 
 /// Dispatched by Lavalink upon successful connection and authorization. Contains fields determining if resuming was successful, as well as the session id.
@@ -142,8 +142,6 @@ pub struct Ready {
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub struct Stats {
-    /// Op code for this websocket event.
-    pub op: Opcode,
     /// CPU information about the node's host.
     pub cpu: StatsCpu,
     /// Statistics about audio frames.
@@ -151,6 +149,8 @@ pub struct Stats {
     pub frame_stats: Option<StatsFrame>,
     /// Memory information about the node's host.
     pub memory: StatsMemory,
+    /// Op code for this websocket event.
+    pub op: Opcode,
     /// The current number of total players (active and not active) within
     /// the node.
     pub players: u64,
@@ -178,12 +178,12 @@ pub struct StatsCpu {
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub struct StatsFrame {
-    /// The number of CPU cores.
-    pub sent: i64,
-    /// The load of the Lavalink server.
-    pub nulled: i64,
     /// The load of the system as a whole.
     pub deficit: i64,
+    /// The load of the Lavalink server.
+    pub nulled: i64,
+    /// The number of CPU cores.
+    pub sent: i64,
 }
 
 /// Memory information about a node and its host.
@@ -206,28 +206,28 @@ pub struct StatsMemory {
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub struct TrackInfo {
+    /// The track artwork url.
+    pub artwork_url: Option<String>,
+    /// The track author.
+    pub author: String,
+    /// The track [ISRC](https://en.wikipedia.org/wiki/International_Standard_Recording_Code).
+    pub isrc: Option<String>,
     /// The track identifier.
     pub identifier: String,
     /// Whether the track is seekable.
     pub is_seekable: bool,
-    /// The track author.
-    pub author: String,
-    /// The track length in milliseconds.
-    pub length: u64,
     /// Whether the track is a stream.
     pub is_stream: bool,
+    /// The track length in milliseconds.
+    pub length: u64,
     /// The track position in milliseconds.
     pub position: u64,
+    /// The track source name.
+    pub source_name: String,
     /// The track title.
     pub title: String,
     /// The track uri.
     pub uri: Option<String>,
-    /// The track artwork url.
-    pub artwork_url: Option<String>,
-    /// The track [ISRC](https://en.wikipedia.org/wiki/International_Standard_Recording_Code).
-    pub isrc: Option<String>,
-    /// The track source name.
-    pub source_name: String,
 }
 
 /// A track object for lavalink to consume and read.
@@ -246,15 +246,15 @@ pub struct Track {
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub struct Event {
-    /// Op code for this websocket event.
-    pub op: Opcode,
-    /// The guild id that this was received from.
-    pub guild_id: String,
-    /// The type of event.
-    pub r#type: EventType,
     /// The data of the event type.
     #[serde(flatten)]
     pub data: EventData,
+    /// The guild id that this was received from.
+    pub guild_id: String,
+    /// Op code for this websocket event.
+    pub op: Opcode,
+    /// The type of event.
+    pub r#type: EventType,
 }
 
 /// Server dispatched an event.
@@ -295,16 +295,16 @@ pub enum EventData {
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub enum TrackEndReason {
+    /// The track was cleaned up.
+    Cleanup,
     /// The track finished playing.
     Finished,
     /// The track failed to load.
     LoadFailed,
-    /// The track was stopped.
-    Stopped,
     /// The track was replaced
     Replaced,
-    /// The track was cleaned up.
-    Cleanup,
+    /// The track was stopped.
+    Stopped,
 }
 
 /// A track ended event from lavalink.
@@ -312,10 +312,10 @@ pub enum TrackEndReason {
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub struct TrackEnd {
-    /// The track that ended playing.
-    pub track: Track,
     /// The reason that the track ended.
     pub reason: TrackEndReason,
+    /// The track that ended playing.
+    pub track: Track,
 }
 
 /// A track started.
@@ -332,10 +332,10 @@ pub struct TrackStart {
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub struct TrackException {
-    /// The track that threw the exception.
-    pub track: Track,
     /// The occurred exception.
     pub exception: Exception,
+    /// The track that threw the exception.
+    pub track: Track,
 }
 
 /// Dispatched when a track gets stuck while playing.
@@ -343,10 +343,10 @@ pub struct TrackException {
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub struct TrackStuck {
-    /// The track that got stuck.
-    pub track: Track,
     /// The threshold in milliseconds that was exceeded.
     pub threshold_ms: u64,
+    /// The track that got stuck.
+    pub track: Track,
 }
 
 /// The voice websocket connection to Discord has been closed.
@@ -354,10 +354,10 @@ pub struct TrackStuck {
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub struct WebSocketClosed {
+    /// True if Discord closed the connection, false if Lavalink closed it.
+    pub by_remote: bool,
     /// [Discord websocket opcode](https://discord.com/developers/docs/topics/opcodes-and-status-codes#voice-voice-close-event-codes) that closed the connection.
     pub code: u64,
     /// Reason the connection was closed.
     pub reason: String,
-    /// True if Discord closed the connection, false if Lavalink closed it.
-    pub by_remote: bool,
 }
