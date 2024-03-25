@@ -17,7 +17,7 @@
 //!
 //! [`Lavalink`]: crate::client::Lavalink
 
-use hyper::{Method, Request};
+use hyper::{Method, Request, Uri};
 use hyper_util::rt::TokioIo;
 
 use crate::{
@@ -552,9 +552,27 @@ impl Connection {
             .unwrap_or("NO_SESSION".to_string());
 
         match outgoing.clone() {
-            OutgoingEvent::Destroy(_) => (Method::DELETE, format!("http://{address}/v4/sessions/{session}/players/{guild_id}").parse::<hyper::Uri>().unwrap()),
-            _ => (Method::PATCH, format!("http://{address}/v4/sessions/{session}/players/{guild_id}?noReplace={no_replace}").parse::<hyper::Uri>().unwrap()),
+            OutgoingEvent::Destroy(_) => {
+                let destroy_uri = Uri::builder()
+                                    .scheme("http")
+                                    .authority(address.to_string())
+                                    .path_and_query(format!("/v4/sessions/{session}/players/{guild_id}"))
+                                    .build()
+                                    .unwrap();
+                return (Method::DELETE, destroy_uri);
+            },
+            _ => {
+                let destroy_uri = Uri::builder()
+                                    .scheme("http")
+                                    .authority(address.to_string())
+                                    .path_and_query(format!("/v4/sessions/{session}/players/{guild_id}?noReplace={no_replace}"))
+                                    .build()
+                                    .unwrap();
+                return (Method::PATCH, destroy_uri);
+            },
         }
+
+
     }
 
     async fn outgoing(&self, outgoing: OutgoingEvent) -> Result<(), NodeError> {
