@@ -83,6 +83,7 @@ impl Display for NodeError {
                 f.write_str("failed to build connection request")
             }
             NodeErrorType::Connecting { .. } => f.write_str("Failed to connect to the node"),
+            NodeErrorType::OutgoingEventHasNoSession { .. } => f.write_str("No session id found for connection to lavalink api."),
             NodeErrorType::SerializingMessage { .. } => {
                 f.write_str("failed to serialize outgoing message as json")
             }
@@ -112,6 +113,8 @@ pub enum NodeErrorType {
     BuildingConnectionRequest,
     /// Connecting to the Lavalink server failed after several backoff attempts.
     Connecting,
+    /// The error for outgoing having no session id to connect to. You can potentially have no valid session before trying to outgoing events
+    OutgoingEventHasNoSession,
     /// Serializing a JSON message to be sent to a Lavalink node failed.
     SerializingMessage {
         /// The message that couldn't be serialized.
@@ -537,46 +540,52 @@ impl Connection {
     async fn get_outgoing_endpoint_based_on_event(
         &self,
         outgoing: &OutgoingEvent,
-    ) -> (Method, hyper::Uri) {
+    ) -> Result<(Method, hyper::Uri), NodeError> {
         let address = self.config.address;
         tracing::debug!("forwarding event to {}: {outgoing:?}", address,);
 
         let guild_id = OutgoingEvent::guild_id(outgoing);
         let no_replace = OutgoingEvent::no_replace(outgoing);
 
-        let session = self
+        let session_id = self
             .lavalink_session_id
             .lock()
             .await
-            .clone()
-            .unwrap_or("NO_SESSION".to_string());
+            .take();
 
-        match outgoing.clone() {
-            OutgoingEvent::Destroy(_) => {
-                let destroy_uri = Uri::builder()
-                    .scheme("http")
-                    .authority(address.to_string())
-                    .path_and_query(format!("/v4/sessions/{session}/players/{guild_id}"))
-                    .build()
-                    .unwrap();
-                return (Method::DELETE, destroy_uri);
+        if let Some(session) = session_id {
+            match outgoing.clone() {
+                OutgoingEvent::Destroy(_) => {
+                    let destroy_uri = Uri::builder()
+                        .scheme("http")
+                        .authority(address.to_string())
+                        .path_and_query(format!("/v4/sessions/{session}/players/{guild_id}"))
+                        .build()
+                        .unwrap();
+                    return Ok((Method::DELETE, destroy_uri));
+                }
+                _ => {
+                    let destroy_uri = Uri::builder()
+                        .scheme("http")
+                        .authority(address.to_string())
+                        .path_and_query(format!(
+                            "/v4/sessions/{session}/players/{guild_id}?noReplace={no_replace}"
+                        ))
+                        .build()
+                        .unwrap();
+                    return Ok((Method::PATCH, destroy_uri));
+                }
             }
-            _ => {
-                let destroy_uri = Uri::builder()
-                    .scheme("http")
-                    .authority(address.to_string())
-                    .path_and_query(format!(
-                        "/v4/sessions/{session}/players/{guild_id}?noReplace={no_replace}"
-                    ))
-                    .build()
-                    .unwrap();
-                return (Method::PATCH, destroy_uri);
-            }
+        } else {
+            return Err(NodeError {
+                kind: NodeErrorType::OutgoingEventHasNoSession,
+                source: None,
+            });
         }
     }
 
     async fn outgoing(&self, outgoing: OutgoingEvent) -> Result<(), NodeError> {
-        let (method, url) = self.get_outgoing_endpoint_based_on_event(&outgoing).await;
+        let (method, url) = self.get_outgoing_endpoint_based_on_event(&outgoing).await?;
         let payload = serde_json::to_string(&outgoing).unwrap();
 
         tracing::debug!("converted payload: {payload:?}");
