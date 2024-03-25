@@ -88,9 +88,9 @@ impl From<Volume> for OutgoingEvent {
 }
 
 impl OutgoingEvent {
-    /// Helper function to get the guild_id attached to the event type.
+    /// Helper function to get the `guild_id` attached to the event type.
     pub const fn guild_id(event: &OutgoingEvent) -> Id<GuildMarker> {
-        return match event {
+        match event {
             OutgoingEvent::VoiceUpdate(voice_update) => voice_update.guild_id,
             OutgoingEvent::Play(play) => play.guild_id,
             OutgoingEvent::Destroy(destroy) => destroy.guild_id,
@@ -99,21 +99,16 @@ impl OutgoingEvent {
             OutgoingEvent::Seek(seek) => seek.guild_id,
             OutgoingEvent::Stop(stop) => stop.guild_id,
             OutgoingEvent::Volume(volume) => volume.guild_id,
-        };
+        }
     }
 
     /// Helper function to get whether or not to replace the current track in the lavalink api based on the event type.
     pub const fn no_replace(event: &OutgoingEvent) -> bool {
-        return match event {
-            OutgoingEvent::VoiceUpdate(_) => true,
+        match event {
             OutgoingEvent::Play(play) => play.no_replace,
-            OutgoingEvent::Destroy(_) => true,
-            OutgoingEvent::Equalizer(_) => true,
-            OutgoingEvent::Pause(_) => true,
-            OutgoingEvent::Seek(_) => true,
             OutgoingEvent::Stop(_) => false,
-            OutgoingEvent::Volume(_) => true,
-        };
+            _ => true,
+        }
     }
 }
 

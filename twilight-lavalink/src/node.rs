@@ -83,7 +83,9 @@ impl Display for NodeError {
                 f.write_str("failed to build connection request")
             }
             NodeErrorType::Connecting { .. } => f.write_str("Failed to connect to the node"),
-            NodeErrorType::OutgoingEventHasNoSession { .. } => f.write_str("No session id found for connection to lavalink api."),
+            NodeErrorType::OutgoingEventHasNoSession { .. } => {
+                f.write_str("No session id found for connection to lavalink api.")
+            }
             NodeErrorType::SerializingMessage { .. } => {
                 f.write_str("failed to serialize outgoing message as json")
             }
@@ -547,44 +549,38 @@ impl Connection {
         let guild_id = OutgoingEvent::guild_id(outgoing);
         let no_replace = OutgoingEvent::no_replace(outgoing);
 
-        let session_id = self
-            .lavalink_session_id
-            .lock()
-            .await
-            .take();
+        let session_id = self.lavalink_session_id.lock().await.take();
 
         if let Some(session) = session_id {
-            tracing::debug!("Found session id {}. Generating the url and method for event type.", session);
+            tracing::debug!(
+                "Found session id {}. Generating the url and method for event type.",
+                session
+            );
 
-            match outgoing.clone() {
-                OutgoingEvent::Destroy(_) => {
-                    let destroy_uri = Uri::builder()
-                        .scheme("http")
-                        .authority(address.to_string())
-                        .path_and_query(format!("/v4/sessions/{session}/players/{guild_id}"))
-                        .build()
-                        .unwrap();
-                    return Ok((Method::DELETE, destroy_uri));
-                }
-                _ => {
-                    let destroy_uri = Uri::builder()
-                        .scheme("http")
-                        .authority(address.to_string())
-                        .path_and_query(format!(
-                            "/v4/sessions/{session}/players/{guild_id}?noReplace={no_replace}"
-                        ))
-                        .build()
-                        .unwrap();
-                    return Ok((Method::PATCH, destroy_uri));
-                }
+            if let OutgoingEvent::Destroy(_) = outgoing.clone() {
+                let destroy_uri = Uri::builder()
+                    .scheme("http")
+                    .authority(address.to_string())
+                    .path_and_query(format!("/v4/sessions/{session}/players/{guild_id}"))
+                    .build()
+                    .unwrap();
+                return Ok((Method::DELETE, destroy_uri));
             }
-        } else {
-            tracing::error!("No session id is found. Session id should have been provided from the websocket connection already.");
-            return Err(NodeError {
-                kind: NodeErrorType::OutgoingEventHasNoSession,
-                source: None,
-            });
+            let uri = Uri::builder()
+                .scheme("http")
+                .authority(address.to_string())
+                .path_and_query(format!(
+                    "/v4/sessions/{session}/players/{guild_id}?noReplace={no_replace}"
+                ))
+                .build()
+                .unwrap();
+            return Ok((Method::PATCH, uri));
         }
+        tracing::error!("No session id is found. Session id should have been provided from the websocket connection already.");
+        Err(NodeError {
+            kind: NodeErrorType::OutgoingEventHasNoSession,
+            source: None,
+        })
     }
 
     async fn outgoing(&self, outgoing: OutgoingEvent) -> Result<(), NodeError> {
@@ -599,10 +595,12 @@ impl Connection {
 
         let address = format!("{host}:{port}");
 
-        let stream = TcpStream::connect(address).await.map_err(|source| NodeError {
-            kind: NodeErrorType::BuildingConnectionRequest,
-            source: Some(Box::new(source)),
-        })?;
+        let stream = TcpStream::connect(address)
+            .await
+            .map_err(|source| NodeError {
+                kind: NodeErrorType::BuildingConnectionRequest,
+                source: Some(Box::new(source)),
+            })?;
 
         let io = TokioIo::new(stream);
 
@@ -623,9 +621,9 @@ impl Connection {
             .header("Content-Type", "application/json")
             .body(payload)
             .map_err(|source| NodeError {
-            kind: NodeErrorType::BuildingConnectionRequest,
-            source: Some(Box::new(source)),
-        })?;
+                kind: NodeErrorType::BuildingConnectionRequest,
+                source: Some(Box::new(source)),
+            })?;
 
         tracing::debug!("Request: {request:?}");
 
@@ -719,10 +717,13 @@ fn connect_request(state: &NodeConfig) -> Result<ClientBuilder, NodeError> {
             kind: NodeErrorType::BuildingConnectionRequest,
             source: Some(Box::new(source)),
         })?
-        .add_header(AUTHORIZATION, state.authorization.parse().map_err(|source| NodeError {
-            kind: NodeErrorType::BuildingConnectionRequest,
-            source: Some(Box::new(source)),
-        })?)
+        .add_header(
+            AUTHORIZATION,
+            state.authorization.parse().map_err(|source| NodeError {
+                kind: NodeErrorType::BuildingConnectionRequest,
+                source: Some(Box::new(source)),
+            })?,
+        )
         .add_header(
             HeaderName::from_static("user-id"),
             state.user_id.get().into(),
@@ -730,18 +731,22 @@ fn connect_request(state: &NodeConfig) -> Result<ClientBuilder, NodeError> {
         .add_header(
             HeaderName::from_static("client-name"),
             HeaderValue::from_str(&client_name).map_err(|source| NodeError {
-            kind: NodeErrorType::BuildingConnectionRequest,
-            source: Some(Box::new(source)),
-        })?,
+                kind: NodeErrorType::BuildingConnectionRequest,
+                source: Some(Box::new(source)),
+            })?,
         );
 
     if state.resume.is_some() {
         builder = builder.add_header(
             HeaderName::from_static("resume-key"),
-            state.address.to_string().parse().map_err(|source| NodeError {
-            kind: NodeErrorType::BuildingConnectionRequest,
-            source: Some(Box::new(source)),
-        })?,
+            state
+                .address
+                .to_string()
+                .parse()
+                .map_err(|source| NodeError {
+                    kind: NodeErrorType::BuildingConnectionRequest,
+                    source: Some(Box::new(source)),
+                })?,
         );
     }
 
@@ -767,15 +772,16 @@ async fn reconnect(
                     "key": config.address,
                     "timeout": resume.timeout,
                 });
-                let msg = Message::text(serde_json::to_string(&payload).map_err(|source| NodeError {
-            kind: NodeErrorType::BuildingConnectionRequest,
-            source: Some(Box::new(source)),
-        })?);
+                let msg =
+                    Message::text(serde_json::to_string(&payload).map_err(|source| NodeError {
+                        kind: NodeErrorType::BuildingConnectionRequest,
+                        source: Some(Box::new(source)),
+                    })?);
 
                 stream.send(msg).await.map_err(|source| NodeError {
-            kind: NodeErrorType::BuildingConnectionRequest,
-            source: Some(Box::new(source)),
-        })?;
+                    kind: NodeErrorType::BuildingConnectionRequest,
+                    source: Some(Box::new(source)),
+                })?;
             } else {
                 tracing::debug!("session to {} resumed", config.address);
             }
