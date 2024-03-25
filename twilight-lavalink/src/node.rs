@@ -554,25 +554,25 @@ impl Connection {
         match outgoing.clone() {
             OutgoingEvent::Destroy(_) => {
                 let destroy_uri = Uri::builder()
-                                    .scheme("http")
-                                    .authority(address.to_string())
-                                    .path_and_query(format!("/v4/sessions/{session}/players/{guild_id}"))
-                                    .build()
-                                    .unwrap();
+                    .scheme("http")
+                    .authority(address.to_string())
+                    .path_and_query(format!("/v4/sessions/{session}/players/{guild_id}"))
+                    .build()
+                    .unwrap();
                 return (Method::DELETE, destroy_uri);
-            },
+            }
             _ => {
                 let destroy_uri = Uri::builder()
-                                    .scheme("http")
-                                    .authority(address.to_string())
-                                    .path_and_query(format!("/v4/sessions/{session}/players/{guild_id}?noReplace={no_replace}"))
-                                    .build()
-                                    .unwrap();
+                    .scheme("http")
+                    .authority(address.to_string())
+                    .path_and_query(format!(
+                        "/v4/sessions/{session}/players/{guild_id}?noReplace={no_replace}"
+                    ))
+                    .build()
+                    .unwrap();
                 return (Method::PATCH, destroy_uri);
-            },
+            }
         }
-
-
     }
 
     async fn outgoing(&self, outgoing: OutgoingEvent) -> Result<(), NodeError> {
