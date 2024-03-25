@@ -549,9 +549,7 @@ impl Connection {
         let guild_id = OutgoingEvent::guild_id(outgoing);
         let no_replace = OutgoingEvent::no_replace(outgoing);
 
-        let session_id = self.lavalink_session_id.lock().await.take();
-
-        if let Some(session) = session_id {
+        if let Some(session) = self.lavalink_session_id.lock().await.clone() {
             tracing::debug!(
                 "Found session id {}. Generating the url and method for event type.",
                 session
