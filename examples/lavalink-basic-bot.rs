@@ -213,11 +213,47 @@ async fn play(msg: Message, state: State) -> anyhow::Result<()> {
                 .content(&content)
                 .await?;
         }
-        Playlist(_) => {
-            todo!("Write example for playlist result.")
+        Playlist(playist) => {
+            if let Some(top_track) = playist.tracks.first() {
+                player.send(Play::from((guild_id, &top_track.encoded)))?;
+
+                let content = format!(
+                    "Playing **{:?}** by **{:?}**",
+                    top_track.info.title, top_track.info.author
+                );
+                state
+                    .http
+                    .create_message(msg.channel_id)
+                    .content(&content)
+                    .await?;
+            }
+
+            state
+                .http
+                .create_message(msg.channel_id)
+                .content("Didn't find any playlist results")
+                .await?;
         }
-        Search(_) => {
-            todo!("Write example for search result.")
+        Search(result) => {
+            if let Some(first_result) = result.first() {
+                player.send(Play::from((guild_id, &first_result.encoded)))?;
+
+                let content = format!(
+                    "Playing **{:?}** by **{:?}**",
+                    first_result.info.title, first_result.info.author
+                );
+                state
+                    .http
+                    .create_message(msg.channel_id)
+                    .content(&content)
+                    .await?;
+            }
+
+            state
+                .http
+                .create_message(msg.channel_id)
+                .content("Didn't find any search results")
+                .await?;
         }
         _ => {
             state
