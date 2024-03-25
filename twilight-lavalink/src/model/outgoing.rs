@@ -88,6 +88,7 @@ impl From<Volume> for OutgoingEvent {
 }
 
 impl OutgoingEvent {
+    /// Helper function to get the guild_id attached to the event type.
     pub const fn guild_id(event: &OutgoingEvent) -> Id<GuildMarker> {
         return match event {
             OutgoingEvent::VoiceUpdate(voice_update) => voice_update.guild_id,
@@ -101,6 +102,7 @@ impl OutgoingEvent {
         };
     }
 
+    /// Helper function to get wether or not to replace the current track in the lavalink api based on the event type.
     pub const fn no_replace(event: &OutgoingEvent) -> bool {
         return match event {
             OutgoingEvent::VoiceUpdate(_) => true,
