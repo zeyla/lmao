@@ -145,7 +145,7 @@ pub struct Stats {
     /// CPU information about the node's host.
     pub cpu: StatsCpu,
     /// Statistics about audio frames.
-    #[serde(rename = "frameStats", skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub frame_stats: Option<StatsFrame>,
     /// Memory information about the node's host.
     pub memory: StatsMemory,
