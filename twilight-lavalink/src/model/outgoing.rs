@@ -232,20 +232,9 @@ impl From<(Id<GuildMarker>, bool)> for Pause {
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub struct Play {
-    /// Information about the track to play.
-    pub track: UpdatePlayerTrack,
-    /// The position in milliseconds to start the track from.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub position: Option<u64>,
     /// The position in milliseconds to end the track.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub end_time: Option<Option<u64>>,
-    /// The player volume, in percentage, from 0 to 1000
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub volume: Option<u64>,
-    ///     Whether the player is paused
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub paused: Option<bool>,
     /// The guild ID of the player.
     #[serde(skip_serializing)]
     pub guild_id: Id<GuildMarker>,
@@ -256,6 +245,17 @@ pub struct Play {
     /// to replace the current playing track with a new one.
     #[serde(skip_serializing)]
     pub no_replace: bool,
+    /// The position in milliseconds to start the track from.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub position: Option<u64>,
+    /// Whether the player is paused
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub paused: Option<bool>,
+    /// Information about the track to play.
+    pub track: UpdatePlayerTrack,
+    /// The player volume, in percentage, from 0 to 1000
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub volume: Option<u64>,
 }
 
 impl Play {
@@ -368,12 +368,12 @@ impl From<Id<GuildMarker>> for Stop {
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub struct Voice {
-    /// The Discord voice token to authenticate with.
-    pub token: String,
     /// The Discord voice endpoint to connect to.
     pub endpoint: String,
     /// The Discord voice session id to authenticate with. This is separate from the session id of lavalink.
     pub session_id: String,
+    /// The Discord voice token to authenticate with.
+    pub token: String,
 }
 
 /// A combined voice server and voice state update.

@@ -38,16 +38,16 @@ where
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub enum LoadResultName {
-    /// A track has been loaded.
-    Track,
-    /// A playlist has been loaded.
-    Playlist,
-    /// A search result has been loaded.
-    Search,
     /// There has been no matches for your identifier.
     Empty,
     /// Loading has failed with an error.
     Error,
+    /// A playlist has been loaded.
+    Playlist,
+    /// A search result has been loaded.
+    Search,
+    /// A track has been loaded.
+    Track,
 }
 
 /// The type of search result given.
@@ -55,16 +55,16 @@ pub enum LoadResultName {
 #[non_exhaustive]
 #[serde(untagged)]
 pub enum LoadResultData {
-    /// Track result with the track info.
-    Track(Track),
-    /// The playlist results with the play list info and tracks in the playlist.
-    Playlist(PlaylistResult),
-    /// The list of tracks based on the search.
-    Search(Vec<Track>),
     /// Empty data response.
     Empty(),
     /// The exception that was thrown when searching.
     Error(Exception),
+    /// The playlist results with the play list info and tracks in the playlist.
+    Playlist(PlaylistResult),
+    /// The list of tracks based on the search.
+    Search(Vec<Track>),
+    /// Track result with the track info.
+    Track(Track),
 }
 
 /// The playlist with the provided tracks. Currently plugin info isn't supported
@@ -83,10 +83,10 @@ pub struct PlaylistResult {
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub struct LoadedTracks {
-    /// The type of search result, such as a list of tracks or a playlist.
-    pub load_type: LoadResultName,
     /// The data of the result.
     pub data: LoadResultData,
+    /// The type of search result, such as a list of tracks or a playlist.
+    pub load_type: LoadResultName,
 }
 
 /// A failing IP address within the planner.
