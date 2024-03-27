@@ -17,6 +17,16 @@
 //!
 //! [`Lavalink`]: crate::client::Lavalink
 
+#[cfg(feature = "lavalink-http2")]
+use hyper::client::conn::http2::SendRequest as Http2SendRequest;
+
+#[cfg(not(feature = "lavalink-http2"))]
+use hyper::client::conn::http1::SendRequest as Http1SendRequest;
+
+#[cfg(feature = "lavalink-http2")]
+use hyper_util::rt::TokioExecutor;
+
+
 use hyper::{Method, Request, Uri};
 use hyper_util::rt::TokioIo;
 
@@ -539,6 +549,55 @@ impl Connection {
         Ok(())
     }
 
+    #[cfg(feature = "lavalink-http2")]
+    async fn get_http_connection(&self, address: &str) -> Result<Http2SendRequest<String>, NodeError> {
+        let stream = TcpStream::connect(address)
+            .await
+            .map_err(|source| NodeError {
+                kind: NodeErrorType::BuildingConnectionRequest,
+                source: Some(Box::new(source)),
+            })?;
+
+        let io = TokioIo::new(stream);
+        let exec = TokioExecutor::new();
+
+        let (sender, conn) = hyper::client::conn::http2::handshake(exec, io).await.map_err(|source| NodeError {
+            kind: NodeErrorType::BuildingConnectionRequest,
+            source: Some(Box::new(source)),
+        })?;
+        tokio::task::spawn(async move {
+            if let Err(err) = conn.await {
+                tracing::error!("Connection failed: {err:?}");
+            }
+        });
+
+        Ok(sender)
+    }
+
+    #[cfg(not(feature = "lavalink-http2"))]
+    async fn get_http_connection(&self, address: &str) -> Result<Http1SendRequest<String>, NodeError> {
+        let stream = TcpStream::connect(address)
+            .await
+            .map_err(|source| NodeError {
+                kind: NodeErrorType::BuildingConnectionRequest,
+                source: Some(Box::new(source)),
+            })?;
+
+        let io = TokioIo::new(stream);
+
+        let (sender, conn) = hyper::client::conn::http1::handshake(io).await.map_err(|source| NodeError {
+            kind: NodeErrorType::BuildingConnectionRequest,
+            source: Some(Box::new(source)),
+        })?;
+        tokio::task::spawn(async move {
+            if let Err(err) = conn.await {
+                tracing::error!("Connection failed: {err:?}");
+            }
+        });
+
+        Ok(sender)
+    }
+
     async fn get_outgoing_endpoint_based_on_event(
         &self,
         outgoing: &OutgoingEvent,
@@ -574,6 +633,7 @@ impl Connection {
                 .unwrap();
             return Ok((Method::PATCH, uri));
         }
+
         tracing::error!("No session id is found. Session id should have been provided from the websocket connection already.");
         Err(NodeError {
             kind: NodeErrorType::OutgoingEventHasNoSession,
@@ -593,21 +653,7 @@ impl Connection {
 
         let address = format!("{host}:{port}");
 
-        let stream = TcpStream::connect(address)
-            .await
-            .map_err(|source| NodeError {
-                kind: NodeErrorType::BuildingConnectionRequest,
-                source: Some(Box::new(source)),
-            })?;
-
-        let io = TokioIo::new(stream);
-
-        let (mut sender, conn) = hyper::client::conn::http1::handshake(io).await.unwrap();
-        tokio::task::spawn(async move {
-            if let Err(err) = conn.await {
-                println!("Connection failed: {err:?}");
-            }
-        });
+        let mut sender = self.get_http_connection(&address).await?;
 
         let authority = url.authority().expect("Authority comes from endpoint. We should have a valid authority and is just used in the header.").clone();
 
