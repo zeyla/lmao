@@ -17,18 +17,19 @@
 //!
 //! [`Lavalink`]: crate::client::Lavalink
 
-#[cfg(feature = "lavalink-protocol-http2")]
-use hyper::client::conn::http2::SendRequest as Http2SendRequest;
+use hyper::{
+    Method, Request, Uri,
+    body::Bytes,
+};
+use hyper_util::{
+    rt::TokioExecutor,
+    client::legacy::{
+        Client as HyperClient,
+        connect::HttpConnector,
+    },
+};
 
-#[cfg(not(feature = "lavalink-protocol-http2"))]
-use hyper::client::conn::http1::SendRequest as Http1SendRequest;
-
-#[cfg(feature = "lavalink-protocol-http2")]
-use hyper_util::rt::TokioExecutor;
-
-
-use hyper::{Method, Request, Uri};
-use hyper_util::rt::TokioIo;
+use http_body_util::Full;
 
 use crate::{
     model::{IncomingEvent, OutgoingEvent, PlayerUpdate, Stats, StatsCpu, StatsMemory},
@@ -483,6 +484,7 @@ impl Node {
 struct Connection {
     config: NodeConfig,
     stream: WebSocketStream<MaybeTlsStream<TcpStream>>,
+    lavalink_http: HyperClient<HttpConnector, Full<Bytes>>,
     node_from: UnboundedReceiver<OutgoingEvent>,
     node_to: UnboundedSender<IncomingEvent>,
     players: PlayerManager,
@@ -507,11 +509,15 @@ impl Connection {
 
         let (to_node, from_lavalink) = mpsc::unbounded_channel();
         let (to_lavalink, from_node) = mpsc::unbounded_channel();
+        let lavalink_http = HyperClient::builder(TokioExecutor::new())
+            .http2_only(cfg!(feature = "lavalink-protocol-http2"))
+            .build_http();
 
         Ok((
             Self {
                 config,
                 stream,
+                lavalink_http,
                 node_from: from_node,
                 node_to: to_node,
                 players,
@@ -539,7 +545,6 @@ impl Connection {
                         self.outgoing(outgoing).await?;
                     } else {
                         tracing::debug!("node {} closed, ending connection", self.config.address);
-
                         break;
                     }
                 }
@@ -547,55 +552,6 @@ impl Connection {
         }
 
         Ok(())
-    }
-
-    #[cfg(feature = "lavalink-protocol-http2")]
-    async fn get_http_connection(&self, address: &str) -> Result<Http2SendRequest<String>, NodeError> {
-        let stream = TcpStream::connect(address)
-            .await
-            .map_err(|source| NodeError {
-                kind: NodeErrorType::BuildingConnectionRequest,
-                source: Some(Box::new(source)),
-            })?;
-
-        let io = TokioIo::new(stream);
-        let exec = TokioExecutor::new();
-
-        let (sender, conn) = hyper::client::conn::http2::handshake(exec, io).await.map_err(|source| NodeError {
-            kind: NodeErrorType::BuildingConnectionRequest,
-            source: Some(Box::new(source)),
-        })?;
-        tokio::task::spawn(async move {
-            if let Err(err) = conn.await {
-                tracing::error!("Connection failed: {err:?}");
-            }
-        });
-
-        Ok(sender)
-    }
-
-    #[cfg(not(feature = "lavalink-protocol-http2"))]
-    async fn get_http_connection(&self, address: &str) -> Result<Http1SendRequest<String>, NodeError> {
-        let stream = TcpStream::connect(address)
-            .await
-            .map_err(|source| NodeError {
-                kind: NodeErrorType::BuildingConnectionRequest,
-                source: Some(Box::new(source)),
-            })?;
-
-        let io = TokioIo::new(stream);
-
-        let (sender, conn) = hyper::client::conn::http1::handshake(io).await.map_err(|source| NodeError {
-            kind: NodeErrorType::BuildingConnectionRequest,
-            source: Some(Box::new(source)),
-        })?;
-        tokio::task::spawn(async move {
-            if let Err(err) = conn.await {
-                tracing::error!("Connection failed: {err:?}");
-            }
-        });
-
-        Ok(sender)
     }
 
     async fn get_outgoing_endpoint_based_on_event(
@@ -648,30 +604,23 @@ impl Connection {
         tracing::debug!("Sending request to {url:?} using method {method:?}.");
         tracing::debug!("converted payload: {payload:?}");
 
-        let host = url.host().expect("uri has no host");
-        let port = url.port_u16().unwrap_or(80);
-
-        let address = format!("{host}:{port}");
-
-        let mut sender = self.get_http_connection(&address).await?;
-
         let authority = url.authority().expect("Authority comes from endpoint. We should have a valid authority and is just used in the header.").clone();
 
-        let request = Request::builder()
+        let req = Request::builder()
             .uri(url)
             .method(method)
             .header(hyper::header::HOST, authority.as_str())
             .header(AUTHORIZATION, self.config.authorization.as_str())
             .header("Content-Type", "application/json")
-            .body(payload)
+            .body(Full::from(payload))
             .map_err(|source| NodeError {
                 kind: NodeErrorType::BuildingConnectionRequest,
                 source: Some(Box::new(source)),
             })?;
 
-        tracing::debug!("Request: {request:?}");
+        tracing::debug!("Request: {req:?}");
 
-        let response = sender.send_request(request).await.unwrap();
+        let response = self.lavalink_http.request(req).await.unwrap();
 
         tracing::debug!("Response status: {}", response.status());
         Ok(())
