@@ -17,16 +17,10 @@
 //!
 //! [`Lavalink`]: crate::client::Lavalink
 
-use hyper::{
-    Method, Request, Uri,
-    body::Bytes,
-};
+use hyper::{body::Bytes, Method, Request, Uri};
 use hyper_util::{
+    client::legacy::{connect::HttpConnector, Client as HyperClient},
     rt::TokioExecutor,
-    client::legacy::{
-        Client as HyperClient,
-        connect::HttpConnector,
-    },
 };
 
 use http_body_util::Full;

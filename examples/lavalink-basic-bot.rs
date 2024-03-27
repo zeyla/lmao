@@ -213,8 +213,8 @@ async fn play(msg: Message, state: State) -> anyhow::Result<()> {
                 .content(&content)
                 .await?;
         }
-        Playlist(playist) => {
-            if let Some(top_track) = playist.tracks.first() {
+        Playlist(playlist) => {
+            if let Some(top_track) = playlist.tracks.first() {
                 player.send(Play::from((guild_id, &top_track.encoded)))?;
 
                 let content = format!(

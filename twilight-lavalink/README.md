@@ -37,7 +37,7 @@ The `lavalink-protocol-http2` switches the underlying protocol to communicate wi
 If enabled, http2 will be used. By default, http1 is used. You will need to enable http2 support
 in your lavalink server configuration if you want to use this feature because by default it is disabled.
 
-***NOTE: This is not to be confused with the `http-support` support flag or crate. This is seperated and doesn't depend on the use of that feature.***
+***NOTE: This is not to be confused with the `http-support` support flag or crate. This is separate and doesn't depend on the use of that feature.***
 
 ### TLS
 
