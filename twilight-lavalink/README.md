@@ -31,6 +31,14 @@ Currently some [Filters](crate::model::outgoing::Filters) are not yet supported.
 The `http-support` feature adds support for the `http` module to return
 request types from the [`http`] crate. This is enabled by default.
 
+### `lavalink-protocol-http2`
+
+The `lavalink-protocol-http2` switches the underlying protocol to communicate with the lavalink server.
+If enabled, http2 will be used. By default, http1 is used. You will need to enable http2 support
+in your lavalink server configuration if you want to use this feature because by default it is disabled.
+
+***NOTE: This is not to be confused with the `http-support` support flag or crate. This is seperated and doesn't depend on the use of that feature.***
+
 ### TLS
 
 `twilight-lavalink` has features to enable [`tokio-websockets`]' TLS

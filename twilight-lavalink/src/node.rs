@@ -17,13 +17,13 @@
 //!
 //! [`Lavalink`]: crate::client::Lavalink
 
-#[cfg(feature = "lavalink-http2")]
+#[cfg(feature = "lavalink-protocol-http2")]
 use hyper::client::conn::http2::SendRequest as Http2SendRequest;
 
-#[cfg(not(feature = "lavalink-http2"))]
+#[cfg(not(feature = "lavalink-protocol-http2"))]
 use hyper::client::conn::http1::SendRequest as Http1SendRequest;
 
-#[cfg(feature = "lavalink-http2")]
+#[cfg(feature = "lavalink-protocol-http2")]
 use hyper_util::rt::TokioExecutor;
 
 
@@ -549,7 +549,7 @@ impl Connection {
         Ok(())
     }
 
-    #[cfg(feature = "lavalink-http2")]
+    #[cfg(feature = "lavalink-protocol-http2")]
     async fn get_http_connection(&self, address: &str) -> Result<Http2SendRequest<String>, NodeError> {
         let stream = TcpStream::connect(address)
             .await
@@ -574,7 +574,7 @@ impl Connection {
         Ok(sender)
     }
 
-    #[cfg(not(feature = "lavalink-http2"))]
+    #[cfg(not(feature = "lavalink-protocol-http2"))]
     async fn get_http_connection(&self, address: &str) -> Result<Http1SendRequest<String>, NodeError> {
         let stream = TcpStream::connect(address)
             .await
