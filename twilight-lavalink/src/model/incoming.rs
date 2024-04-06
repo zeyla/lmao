@@ -96,7 +96,7 @@ pub struct VoiceState {
     pub token: String,
 }
 
-/// An update about the information of a player. Filters are currently unsupported
+/// An update of a player's status and state.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]

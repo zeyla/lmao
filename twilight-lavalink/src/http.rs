@@ -56,7 +56,7 @@ pub enum LoadResultName {
 #[serde(untagged)]
 pub enum LoadResultData {
     /// Empty data response.
-    Empty(),
+    Empty,
     /// The exception that was thrown when searching.
     Error(Exception),
     /// The playlist results with the play list info and tracks in the playlist.

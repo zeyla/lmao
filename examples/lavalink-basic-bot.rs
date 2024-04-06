@@ -199,69 +199,32 @@ async fn play(msg: Message, state: State) -> anyhow::Result<()> {
 
     let loaded = serde_json::from_slice::<LoadedTracks>(&response_bytes)?;
 
-    match loaded.data {
-        Track(track) => {
-            player.send(Play::from((guild_id, &track.encoded)))?;
+    let track = match loaded.data {
+        Track(track) => Some(track),
+        Playlist(top_track) => top_track.tracks.first().cloned(),
+        Search(result) => result.first().cloned(),
+        _ => None,
+    };
 
-            let content = format!(
-                "Playing **{:?}** by **{:?}**",
-                track.info.title, track.info.author
-            );
-            state
-                .http
-                .create_message(msg.channel_id)
-                .content(&content)
-                .await?;
-        }
-        Playlist(playlist) => {
-            if let Some(top_track) = playlist.tracks.first() {
-                player.send(Play::from((guild_id, &top_track.encoded)))?;
+    if let Some(track) = track {
+        player.send(Play::from((guild_id, &track.encoded)))?;
 
-                let content = format!(
-                    "Playing **{:?}** by **{:?}**",
-                    top_track.info.title, top_track.info.author
-                );
-                state
-                    .http
-                    .create_message(msg.channel_id)
-                    .content(&content)
-                    .await?;
-            }
+        let content = format!(
+            "Playing **{:?}** by **{:?}**",
+            track.info.title, track.info.author
+        );
 
-            state
-                .http
-                .create_message(msg.channel_id)
-                .content("Didn't find any playlist results")
-                .await?;
-        }
-        Search(result) => {
-            if let Some(first_result) = result.first() {
-                player.send(Play::from((guild_id, &first_result.encoded)))?;
-
-                let content = format!(
-                    "Playing **{:?}** by **{:?}**",
-                    first_result.info.title, first_result.info.author
-                );
-                state
-                    .http
-                    .create_message(msg.channel_id)
-                    .content(&content)
-                    .await?;
-            }
-
-            state
-                .http
-                .create_message(msg.channel_id)
-                .content("Didn't find any search results")
-                .await?;
-        }
-        _ => {
-            state
-                .http
-                .create_message(msg.channel_id)
-                .content("Didn't find any results")
-                .await?;
-        }
+        state
+            .http
+            .create_message(msg.channel_id)
+            .content(&content)
+            .await?;
+    } else {
+        state
+            .http
+            .create_message(msg.channel_id)
+            .content("Didn't find any results")
+            .await?;
     }
 
     Ok(())
