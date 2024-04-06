@@ -87,6 +87,9 @@ impl Display for NodeError {
             NodeErrorType::BuildingConnectionRequest { .. } => {
                 f.write_str("failed to build connection request")
             }
+            NodeErrorType::HttpRequestFailed { .. } => {
+                f.write_str("failed to send http request to lavalink server")
+            }
             NodeErrorType::Connecting { .. } => f.write_str("Failed to connect to the node"),
             NodeErrorType::OutgoingEventHasNoSession { .. } => {
                 f.write_str("No session id found for connection to lavalink api.")
@@ -118,6 +121,8 @@ impl Error for NodeError {
 pub enum NodeErrorType {
     /// Building the HTTP request to initialize a connection failed.
     BuildingConnectionRequest,
+    /// The request to send to lavalink has failed,
+    HttpRequestFailed,
     /// Connecting to the Lavalink server failed after several backoff attempts.
     Connecting,
     /// You can potentially have no valid session before trying to send outgoing
@@ -614,7 +619,14 @@ impl Connection {
 
         tracing::trace!("Request: {req:?}");
 
-        let response = self.lavalink_http.request(req).await.unwrap();
+        let response = self
+            .lavalink_http
+            .request(req)
+            .await
+            .map_err(|source| NodeError {
+                kind: NodeErrorType::HttpRequestFailed,
+                source: Some(Box::new(source)),
+            })?;
 
         tracing::debug!("Response status: {}", response.status());
         Ok(())
