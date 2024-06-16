@@ -27,6 +27,7 @@ use futures_util::{
     stream::{Stream, StreamExt},
 };
 use http::header::{HeaderName, HeaderValue, AUTHORIZATION};
+use http_body_util::Full;
 use hyper::{body::Bytes, header, Method, Request, Uri};
 use hyper_util::{
     client::legacy::{connect::HttpConnector, Client as HyperClient},
@@ -50,8 +51,6 @@ use tokio_websockets::{
     upgrade, ClientBuilder, Error as WebsocketError, MaybeTlsStream, Message, WebSocketStream,
 };
 use twilight_model::id::{marker::UserMarker, Id};
-
-use http_body_util::Full;
 
 /// An error occurred while either initializing a connection or while running
 /// its event loop.
