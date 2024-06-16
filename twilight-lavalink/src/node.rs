@@ -509,9 +509,7 @@ impl Connection {
 
         let (to_node, from_lavalink) = mpsc::unbounded_channel();
         let (to_lavalink, from_node) = mpsc::unbounded_channel();
-        let lavalink_http = HyperClient::builder(TokioExecutor::new())
-            .http2_only(cfg!(feature = "http2"))
-            .build_http();
+        let lavalink_http = HyperClient::builder(TokioExecutor::new()).build_http();
 
         Ok((
             Self {
