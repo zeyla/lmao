@@ -562,8 +562,8 @@ impl Connection {
         let address = self.config.address;
         tracing::debug!("forwarding event to {}: {outgoing:?}", address);
 
-        let guild_id = OutgoingEvent::guild_id(outgoing);
-        let no_replace = OutgoingEvent::no_replace(outgoing);
+        let guild_id = outgoing.guild_id();
+        let no_replace = outgoing.no_replace();
 
         if let Some(session) = self.lavalink_session_id.lock().await.clone() {
             tracing::debug!(

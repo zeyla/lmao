@@ -89,24 +89,24 @@ impl From<Volume> for OutgoingEvent {
 
 impl OutgoingEvent {
     /// Helper function to get the `guild_id` attached to the event type.
-    pub const fn guild_id(event: &OutgoingEvent) -> Id<GuildMarker> {
-        match event {
-            OutgoingEvent::VoiceUpdate(voice_update) => voice_update.guild_id,
-            OutgoingEvent::Play(play) => play.guild_id,
-            OutgoingEvent::Destroy(destroy) => destroy.guild_id,
-            OutgoingEvent::Equalizer(equalize) => equalize.guild_id,
-            OutgoingEvent::Pause(pause) => pause.guild_id,
-            OutgoingEvent::Seek(seek) => seek.guild_id,
-            OutgoingEvent::Stop(stop) => stop.guild_id,
-            OutgoingEvent::Volume(volume) => volume.guild_id,
+    pub const fn guild_id(&self) -> Id<GuildMarker> {
+        match self {
+            Self::VoiceUpdate(voice_update) => voice_update.guild_id,
+            Self::Play(play) => play.guild_id,
+            Self::Destroy(destroy) => destroy.guild_id,
+            Self::Equalizer(equalize) => equalize.guild_id,
+            Self::Pause(pause) => pause.guild_id,
+            Self::Seek(seek) => seek.guild_id,
+            Self::Stop(stop) => stop.guild_id,
+            Self::Volume(volume) => volume.guild_id,
         }
     }
 
     /// Helper function to get whether or not to replace the current track in the lavalink api based on the event type.
-    pub const fn no_replace(event: &OutgoingEvent) -> bool {
-        match event {
-            OutgoingEvent::Play(play) => play.no_replace,
-            OutgoingEvent::Stop(_) => false,
+    pub const fn no_replace(&self) -> bool {
+        match self {
+            Self::Play(play) => play.no_replace,
+            Self::Stop(_) => false,
             _ => true,
         }
     }
