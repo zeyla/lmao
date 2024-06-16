@@ -703,10 +703,9 @@ impl Drop for Connection {
     }
 }
 
-fn connect_request(state: &NodeConfig) -> Result<ClientBuilder, NodeError> {
-    let crate_version = env!("CARGO_PKG_VERSION");
-    let client_name = format!("twilight-lavalink/{crate_version}");
+const TWILIGHT_CLIENT_NAME: &str = concat!("twilight-lavalink/", env!("CARGO_PKG_VERSION"));
 
+fn connect_request(state: &NodeConfig) -> Result<ClientBuilder, NodeError> {
     let mut builder = ClientBuilder::new()
         .uri(&format!("ws://{}/v4/websocket", state.address))
         .map_err(|source| NodeError {
@@ -726,10 +725,7 @@ fn connect_request(state: &NodeConfig) -> Result<ClientBuilder, NodeError> {
         )
         .add_header(
             HeaderName::from_static("client-name"),
-            HeaderValue::from_str(&client_name).map_err(|source| NodeError {
-                kind: NodeErrorType::BuildingConnectionRequest,
-                source: Some(Box::new(source)),
-            })?,
+            HeaderValue::from_static(TWILIGHT_CLIENT_NAME),
         );
 
     if state.resume.is_some() {
