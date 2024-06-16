@@ -614,8 +614,6 @@ impl Connection {
                 source: Some(Box::new(source)),
             })?;
 
-        tracing::trace!("Request: {req:?}");
-
         let response = self
             .lavalink_http
             .request(req)
