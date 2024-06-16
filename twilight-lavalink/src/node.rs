@@ -489,7 +489,7 @@ struct Connection {
     node_to: UnboundedSender<IncomingEvent>,
     players: PlayerManager,
     stats: BiLock<Stats>,
-    lavalink_session_id: BiLock<Option<String>>,
+    lavalink_session_id: Option<Box<str>>,
 }
 
 impl Connection {
@@ -522,7 +522,7 @@ impl Connection {
                 node_to: to_node,
                 players,
                 stats,
-                lavalink_session_id: BiLock::new(None).0,
+                lavalink_session_id: None,
             },
             to_lavalink,
             from_lavalink,
@@ -555,7 +555,7 @@ impl Connection {
     }
 
     async fn get_outgoing_endpoint_based_on_event(
-        &self,
+        &mut self,
         outgoing: &OutgoingEvent,
     ) -> Result<(Method, hyper::Uri), NodeError> {
         let address = self.config.address;
@@ -564,7 +564,7 @@ impl Connection {
         let guild_id = outgoing.guild_id();
         let no_replace = outgoing.no_replace();
 
-        if let Some(session) = self.lavalink_session_id.lock().await.clone() {
+        if let Some(session) = &self.lavalink_session_id {
             tracing::debug!(
                 "Found session id {}. Generating the url and method for event type.",
                 session
@@ -595,7 +595,7 @@ impl Connection {
         })
     }
 
-    async fn outgoing(&self, outgoing: OutgoingEvent) -> Result<(), NodeError> {
+    async fn outgoing(&mut self, outgoing: OutgoingEvent) -> Result<(), NodeError> {
         let (method, url) = self.get_outgoing_endpoint_based_on_event(&outgoing).await?;
         let payload = serde_json::to_string(&outgoing).expect("serialization cannot fail");
 
@@ -658,7 +658,7 @@ impl Connection {
         match &event {
             IncomingEvent::PlayerUpdate(update) => self.player_update(update)?,
             IncomingEvent::Ready(ready) => {
-                *self.lavalink_session_id.lock().await = Some(ready.session_id.clone());
+                self.lavalink_session_id = Some(ready.session_id.clone().into_boxed_str());
             }
             IncomingEvent::Stats(stats) => self.stats(stats).await?,
             &IncomingEvent::Event(_) => {}
