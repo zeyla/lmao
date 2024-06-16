@@ -5,14 +5,14 @@ use twilight_model::{
     id::{marker::GuildMarker, Id},
 };
 
-/// The track on the player. The encoded and identifier are mutually exclusive. Using only encoded for now.
-/// Encoded was chosen since that was previously used in the v3 implementation.
-/// We don't support userData field currently.
+/// The track on the player. The encoded and identifier are mutually exclusive.
+/// Using only encoded for now. Encoded was chosen since that was previously
+/// used in the v3 implementation. We don't support userData field currently.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub struct UpdatePlayerTrack {
-    /// The base64 encoded track to play. null stops the current track
+    /// The base64 encoded track to play.
     pub encoded: Option<String>,
 }
 
@@ -88,7 +88,7 @@ impl From<Volume> for OutgoingEvent {
 }
 
 impl OutgoingEvent {
-    /// Helper function to get the `guild_id` attached to the event type.
+    /// ID of the destination guild of this event.
     pub const fn guild_id(&self) -> Id<GuildMarker> {
         match self {
             Self::VoiceUpdate(voice_update) => voice_update.guild_id,
@@ -102,8 +102,8 @@ impl OutgoingEvent {
         }
     }
 
-    /// Helper function to get whether or not to replace the current track in the lavalink api based on the event type.
-    pub const fn no_replace(&self) -> bool {
+    /// Whether this event replaces the currently playing track.
+    pub(crate) const fn no_replace(&self) -> bool {
         match self {
             Self::Play(play) => play.no_replace,
             Self::Stop(_) => false,

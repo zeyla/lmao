@@ -23,15 +23,22 @@ use twilight_model::id::{marker::GuildMarker, Id};
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub enum Severity {
-    /// The cause is known and expected, indicates that there is nothing wrong with the library itself.
+    /// The cause is known and expected, indicates that there is nothing wrong
+    /// with the library itself.
     Common,
-    /// The probable cause is an issue with the library or there is no way to tell what the cause might be. This is the default level and other levels are used in cases where the thrower has more in-depth knowledge about the error.
+    /// The probable cause is an issue with the library or there is no way to
+    /// tell what the cause might be. This is the default level and other
+    /// levels are used in cases where the thrower has more in-depth knowledge
+    /// about the error.
     Fault,
-    /// The cause might not be exactly known, but is possibly caused by outside factors. For example when an outside service responds in a format that we do not expect.
+    /// The cause might not be exactly known, but is possibly caused by outside
+    /// factors. For example when an outside service responds in a format that
+    /// we do not expect.
     Suspicious,
 }
 
-/// The exception with the details attached on what happened when making a query to lavalink.
+/// The exception with the details attached on what happened when making a query
+/// to lavalink.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
@@ -83,14 +90,16 @@ impl From<Stats> for IncomingEvent {
     }
 }
 
-/// The discord voice information that lavalink uses for connection and sending information.
+/// The discord voice information that lavalink uses for connection and sending
+/// information.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub struct VoiceState {
     /// The Discord voice endpoint to connect to.
     pub endpoint: String,
-    /// The Discord voice session id to authenticate with. Note this is separate from the lavalink session id.
+    /// The Discord voice session id to authenticate with. Note this is separate
+    /// from the lavalink session id.
     pub session_id: String,
     /// The Discord voice token to authenticate with.
     pub token: String,
@@ -124,7 +133,7 @@ pub struct PlayerUpdateState {
     pub time: i64,
 }
 
-/// Dispatched by Lavalink upon successful connection and authorization. Contains fields determining if resuming was successful, as well as the session id.
+/// Dispatched by Lavalink upon successful connection and authorization.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
@@ -133,7 +142,8 @@ pub struct Ready {
     pub op: Opcode,
     /// Whether this session was resumed.
     pub resumed: bool,
-    /// The Lavalink session id of this connection. Not to be confused with a Discord voice session id.
+    /// The Lavalink session id of this connection. Not to be confused with a
+    /// Discord voice session id.
     pub session_id: String,
 }
 
@@ -356,7 +366,8 @@ pub struct TrackStuck {
 pub struct WebSocketClosed {
     /// True if Discord closed the connection, false if Lavalink closed it.
     pub by_remote: bool,
-    /// [Discord websocket opcode](https://discord.com/developers/docs/topics/opcodes-and-status-codes#voice-voice-close-event-codes) that closed the connection.
+    /// [Discord websocket opcode](https://discord.com/developers/docs/topics/opcodes-and-status-codes#voice-voice-close-event-codes)
+    /// that closed the connection.
     pub code: u64,
     /// Reason the connection was closed.
     pub reason: String,
