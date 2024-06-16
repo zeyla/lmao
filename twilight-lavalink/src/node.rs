@@ -557,17 +557,12 @@ impl Connection {
         outgoing: &OutgoingEvent,
     ) -> Result<(Method, hyper::Uri), NodeError> {
         let address = self.config.address;
-        tracing::debug!("forwarding event to {}: {outgoing:?}", address);
+        tracing::debug!("forwarding event to {address}: {outgoing:?}");
 
         let guild_id = outgoing.guild_id();
         let no_replace = outgoing.no_replace();
 
         if let Some(session) = &self.lavalink_session_id {
-            tracing::debug!(
-                "Found session id {}. Generating the url and method for event type.",
-                session
-            );
-
             let mut path = format!("/v4/sessions/{session}/players/{guild_id}");
             if !matches!(outgoing, OutgoingEvent::Destroy(_)) {
                 path.push_str(&format!("?noReplace={no_replace}"));
@@ -597,9 +592,6 @@ impl Connection {
         let (method, url) = self.get_outgoing_endpoint_based_on_event(&outgoing).await?;
         let payload = serde_json::to_string(&outgoing).expect("serialization cannot fail");
 
-        tracing::debug!("Sending request to {url:?} using method {method:?}.");
-        tracing::debug!("converted payload: {payload:?}");
-
         let authority = url.authority().expect("Authority comes from endpoint. We should have a valid authority and is just used in the header.");
 
         let req = Request::builder()
@@ -614,8 +606,7 @@ impl Connection {
                 source: Some(Box::new(source)),
             })?;
 
-        let response = self
-            .lavalink_http
+        self.lavalink_http
             .request(req)
             .await
             .map_err(|source| NodeError {
@@ -623,7 +614,6 @@ impl Connection {
                 source: Some(Box::new(source)),
             })?;
 
-        tracing::debug!("Response status: {}", response.status());
         Ok(())
     }
 
