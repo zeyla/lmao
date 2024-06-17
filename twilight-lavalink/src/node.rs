@@ -552,7 +552,7 @@ impl Connection {
         Ok(())
     }
 
-    async fn get_outgoing_endpoint_based_on_event(
+    fn get_outgoing_endpoint_based_on_event(
         &mut self,
         outgoing: &OutgoingEvent,
     ) -> Result<(Method, hyper::Uri), NodeError> {
@@ -589,7 +589,7 @@ impl Connection {
     }
 
     async fn outgoing(&mut self, outgoing: OutgoingEvent) -> Result<(), NodeError> {
-        let (method, url) = self.get_outgoing_endpoint_based_on_event(&outgoing).await?;
+        let (method, url) = self.get_outgoing_endpoint_based_on_event(&outgoing)?;
         let payload = serde_json::to_string(&outgoing).expect("serialization cannot fail");
 
         let authority = url.authority().expect("Authority comes from endpoint. We should have a valid authority and is just used in the header.");
