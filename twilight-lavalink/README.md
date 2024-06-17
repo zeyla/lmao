@@ -15,22 +15,24 @@ with every Voice State Update and Voice Server Update you receive.
 
 A breakdown of how this functions:
 - The client is [`Lavalink`](crate::client::Lavalink) that forwards the required events from Discord.
-    - We read the [Voice State and Voice Server Updates](https://discord.com/developers/docs/topics/gateway-events#voice) from discord to format the data to send to a Lavalink VoiceUpdate Event.
+    - We read the [Voice State and Voice Server Updates](https://discord.com/developers/docs/topics/gateway-events#voice) from discord to format the data to send to a Lavalink `VoiceUpdate` Event.
     - There is a lower level [node](crate::node) that processes this for you. It isn't recommended to use this but rather the lavalink struct with the players. If you don't find functionality please open up and issue to expose what you need.
 - You send the client an [outgoing event](crate::model::outgoing). These include play, pause, seek, etc. You send these through the [player](crate::player) that is attached to Lavalink.
 - If you want to search or load you need to create a http client currently and then you can use [these helpers functions](crate::http#functions) to generate the http uri and body to send over your http client. you will then get response you can deserialize as json into the structs in the [http module](crate::http).
 
-***NOTE: We currently only support `v4` of Lavlink. Support for `v3` is dropped. There was big changes in the api meaning the outgoing are now using a http client instead of websockets. The json request and responses all changed naming and fields changed.***
-
-Currently some [Filters](crate::model::outgoing::Filters) are not yet supported. There are some unsupported end points that were added yet such as [Lavalink Info](https://lavalink.dev/api/rest.html#get-lavalink-version) or [Session Api](https://lavalink.dev/api/rest.html#session-api) that weren't previously available. If you would like native support for something please reach out and open an issue for that feature. The porting only ported the functionality of the previous `v3` forward.
+Currently some [Filters](crate::model::outgoing::Filters) are not yet supported.
+Some endpoints such as [Lavalink Info] and [Update Session] have also not yet
+been implemented. Please reach out and open an issue for any missing feature you
+would like to use. The Lavalink V4 port did not add support for any new features
+not previously found in V3.
 
 ## Features
 
 ### `http2`
 
-The `http2` switches the underlying protocol to communicate with the lavalink server.
-If enabled, http2 will be used instead. You will need to enable http2 support
-in your lavalink server configuration if you want to use this feature because by default it is disabled.
+The `http2` feature enables support for communicating with the Lavalink server
+over HTTP/2. You will also need to enable http2 support in your Lavalink server
+configuration as it is disabled by default.
 
 ### TLS
 
@@ -116,6 +118,8 @@ There is also an example of a basic bot located in the [root of the
 `twilight` repository][github examples link].
 
 [Lavalink]: https://github.com/freyacodes/Lavalink
+[Lavalink Info]: https://lavalink.dev/api/rest.html#get-lavalink-version
+[Update Session]: https://lavalink.dev/api/rest#update-session
 [`http`]: https://crates.io/crates/http
 [`rustls`]: https://crates.io/crates/rustls
 [`rustls-native-certs`]: https://crates.io/crates/rustls-native-certs

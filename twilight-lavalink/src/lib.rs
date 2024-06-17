@@ -19,3 +19,6 @@ pub mod node;
 pub mod player;
 
 pub use self::{client::Lavalink, node::Node, player::PlayerManager};
+
+/// Lavalink API version used by this crate.
+pub const API_VERSION: u8 = 4;
