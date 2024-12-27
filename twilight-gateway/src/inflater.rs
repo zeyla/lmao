@@ -114,10 +114,13 @@ impl Debug for Inflater {
 }
 
 impl Inflater {
+    /// [`Self::buffer`]'s size.
+    const BUFFER_SIZE: usize = 32 * 1024;
+
     /// Create a new inflator for a shard.
     pub(crate) fn new() -> Self {
         Self {
-            buffer: vec![0; DCtx::out_size()].into_boxed_slice(),
+            buffer: vec![0; Self::BUFFER_SIZE].into_boxed_slice(),
             ctx: DCtx::create(),
             processed: 0,
             produced: 0,
@@ -179,5 +182,36 @@ impl Inflater {
     /// Total number of bytes produced.
     pub const fn produced(&self) -> u64 {
         self.produced
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Inflater;
+
+    const MESSAGE: [u8; 117] = [
+        40, 181, 47, 253, 0, 64, 100, 3, 0, 66, 7, 25, 28, 112, 137, 115, 116, 40, 208, 203, 85,
+        255, 167, 74, 75, 126, 203, 222, 231, 255, 151, 18, 211, 212, 171, 144, 151, 210, 255, 51,
+        4, 49, 34, 71, 98, 2, 36, 253, 122, 141, 99, 203, 225, 11, 162, 47, 133, 241, 6, 201, 82,
+        245, 91, 206, 247, 164, 226, 156, 92, 108, 130, 123, 11, 95, 199, 15, 61, 179, 117, 157,
+        28, 37, 65, 64, 25, 250, 182, 8, 199, 205, 44, 73, 47, 19, 218, 45, 27, 14, 245, 202, 81,
+        82, 122, 167, 121, 71, 173, 61, 140, 190, 15, 3, 1, 0, 36, 74, 18,
+    ];
+    const OUTPUT: &str = r#"{"t":null,"s":null,"op":10,"d":{"heartbeat_interval":41250,"_trace":["[\"gateway-prd-us-east1-c-7s4x\",{\"micros\":0.0}]"]}}"#;
+
+    #[test]
+    fn decompress_single_segment() {
+        let mut inflator = Inflater::new();
+        assert_eq!(inflator.inflate(&MESSAGE).unwrap(), OUTPUT);
+    }
+
+    #[test]
+    fn reset() {
+        let mut inflator = Inflater::new();
+        inflator.inflate(&MESSAGE[..MESSAGE.len() - 2]).unwrap();
+
+        assert!(inflator.inflate(&MESSAGE).is_err());
+        inflator.reset();
+        assert_eq!(inflator.inflate(&MESSAGE).unwrap(), OUTPUT);
     }
 }
