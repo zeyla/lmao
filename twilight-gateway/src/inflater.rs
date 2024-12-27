@@ -93,7 +93,7 @@ pub enum CompressionErrorType {
 /// ```
 pub struct Inflater {
     /// Common decompressed message buffer.
-    buffer: Vec<u8>,
+    buffer: Box<[u8]>,
     /// Reusable zstd decompression context.
     ctx: DCtx<'static>,
     /// Total number of bytes processed.
@@ -117,7 +117,7 @@ impl Inflater {
     /// Create a new inflator for a shard.
     pub(crate) fn new() -> Self {
         Self {
-            buffer: Vec::with_capacity(DCtx::out_size()),
+            buffer: vec![0; DCtx::out_size()].into_boxed_slice(),
             ctx: DCtx::create(),
             processed: 0,
             produced: 0,
@@ -141,7 +141,7 @@ impl Inflater {
         let mut decompressed = Vec::new();
 
         loop {
-            let mut output = OutBuffer::around(&mut self.buffer);
+            let mut output = OutBuffer::around(self.buffer.as_mut());
 
             self.ctx
                 .decompress_stream(&mut output, &mut input)
